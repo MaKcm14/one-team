@@ -9,9 +9,10 @@ import (
 )
 
 type AuthService struct {
-	logger     *slog.Logger
 	conf       config.AuthServiceConfig
 	controller chttp.HttpController
+
+	logger *slog.Logger
 }
 
 func NewAuthService() AuthService {

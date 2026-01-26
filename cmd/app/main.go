@@ -1,5 +1,8 @@
 package main
 
-func main() {
+import "auth-train/test/internal/app"
 
+func main() {
+	service := app.NewAuthService()
+	service.Start()
 }

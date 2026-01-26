@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Информация о пользователе</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        input {
+            padding: 10px;
+            width: 250px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        #user-info { margin-top: 30px; }
+        .field { margin: 15px 0; padding: 10px; background: #f8f9fa; border-radius: 5px; }
+        .bank-account { background: #e7f3ff; border-left: 4px solid #007bff; }
+        .error { color: red; margin-top: 10px; }
+        .loading { color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Информация о пользователе</h1>
+        <div>
+            <input type="text" id="userIdInput" placeholder="Введите userID (например, 1)" value="1">
+            <button onclick="loadUser()">Загрузить</button>
+        </div>
+        
+        <div id="user-info" style="display: none;">
+            <!-- Данные пользователя будут здесь -->
+        </div>
+        <div id="error" class="error"></div>
+    </div>
+
+    <script>
+        async function loadUser() {
+            const userId = document.getElementById('userIdInput').value.trim();
+            const userInfoDiv = document.getElementById('user-info');
+            const errorDiv = document.getElementById('error');
+            
+            // Очистка
+            userInfoDiv.style.display = 'none';
+            userInfoDiv.innerHTML = '<div class="loading">Загрузка...</div>';
+            errorDiv.textContent = '';
+            
+            if (!userId) {
+                errorDiv.textContent = 'Введите userID';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/get/user?userID=${userId}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const user = await response.json();
+                
+                userInfoDiv.innerHTML = `
+                    <div class="field">
+                        <strong>ID:</strong> ${user.id}
+                    </div>
+                    <div class="field">
+                        <strong>Имя:</strong> ${user.name}
+                    </div>
+                    <div class="field">
+                        <strong>Фамилия:</strong> ${user.surname}
+                    </div>
+                    <div class="field">
+                        <strong>Паспорт:</strong> ${user.passport}
+                    </div>
+                    <div class="field bank-account">
+                        <strong>Банковский счёт:</strong><br>
+                        &nbsp;&nbsp;ID: ${user.bank_account.id}<br>
+                        &nbsp;&nbsp;Баланс: ${user.bank_account.money.toLocaleString()} руб.
+                    </div>
+                `;
+                userInfoDiv.style.display = 'block';
+                
+            } catch (error) {
+                userInfoDiv.style.display = 'none';
+                errorDiv.textContent = `Ошибка: ${error.message}. Проверьте сервер на localhost:8080.`;
+            }
+        }
+        
+        // Загрузка при Enter в поле
+        document.getElementById('userIdInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') loadUser();
+        });
+        
+        // Загрузка по умолчанию
+        loadUser();
+    </script>
+</body>
+</html>
