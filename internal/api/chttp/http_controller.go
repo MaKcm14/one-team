@@ -17,15 +17,17 @@ type errorResponse struct {
 
 type HttpController struct {
 	e     *echo.Echo
-	store repo.BankRepository
+	store repo.Repository
+	auth  authenticator
 
 	logger *slog.Logger
 }
 
-func New(logger *slog.Logger) HttpController {
+func New(logger *slog.Logger, secret string) HttpController {
 	return HttpController{
 		e:      echo.New(),
-		store:  repo.NewBankRepository(logger),
+		store:  repo.NewRepository(logger),
+		auth:   newAuthenticator(secret),
 		logger: logger,
 	}
 }
@@ -43,26 +45,15 @@ func (h HttpController) Run(socket string) error {
 func (h *HttpController) configPath() {
 	h.e.File("/index.html", "../../web/api/static/index.html")
 
-	h.e.GET("/get/user", h.handlerGetUser)
-	h.e.GET("/get/user/list", h.handlerGetUserList)
+	h.e.GET("/get/user", h.handlerGetUser, h.handlerVerifyToken)
+	h.e.GET("/get/user/list", h.handlerGetUserList, h.handlerVerifyToken)
 
-	h.e.POST("/create/user", h.handlerCreateUser)
+	h.e.POST("/create/user", h.handlerSignUp)
+	h.e.POST("/login", h.handlerLogin)
 
-	h.e.DELETE("/delete/user", h.handlerDeleteUser)
+	h.e.DELETE("/delete/user", h.handlerDeleteUser, h.handlerVerifyToken)
 
-	h.e.PATCH("/set/money", h.handlerSetMoney)
-}
-
-func (h *HttpController) handlerCreateUser(ctx echo.Context) error {
-	userCfg := repo.UserConfig{}
-	if err := ctx.Bind(&userCfg); err != nil {
-		return ctx.JSON(http.StatusBadRequest, errorResponse{ErrBindingScheme.Error()})
-	}
-
-	if err := validateUser(userCfg); err != nil {
-		return ctx.JSON(http.StatusBadRequest, errorResponse{err.Error()})
-	}
-	return ctx.JSON(http.StatusCreated, h.store.CreateUser(userCfg))
+	h.e.PATCH("/set/money", h.handlerSetMoney, h.handlerVerifyToken)
 }
 
 func (h *HttpController) handlerDeleteUser(ctx echo.Context) error {

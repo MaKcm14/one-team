@@ -8,7 +8,8 @@ import (
 )
 
 type AuthServiceConfig struct {
-	Socket string
+	Socket     string
+	HMACSecret string
 }
 
 func NewAuthServiceConfig(logger *slog.Logger, opts ...AuthConfigOpt) AuthServiceConfig {

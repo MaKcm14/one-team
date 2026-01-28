@@ -5,21 +5,21 @@ import (
 	"log/slog"
 )
 
-type BankRepository struct {
-	users    map[entity.UserID]entity.User
-	counters repoCounters
+type Repository struct {
+	bankUsers map[entity.UserID]entity.User
+	counters  repoCounters
 
 	logger *slog.Logger
 }
 
-func NewBankRepository(logger *slog.Logger) BankRepository {
-	return BankRepository{
-		users:  make(map[entity.UserID]entity.User, 100),
-		logger: logger,
+func NewRepository(logger *slog.Logger) Repository {
+	return Repository{
+		bankUsers: make(map[entity.UserID]entity.User, 100),
+		logger:    logger,
 	}
 }
 
-func (b *BankRepository) CreateUser(userCfg UserConfig) entity.User {
+func (b *Repository) CreateUser(userCfg UserConfig) entity.User {
 	user := UserConfigToUser(userCfg)
 
 	b.counters.userID++
@@ -28,38 +28,47 @@ func (b *BankRepository) CreateUser(userCfg UserConfig) entity.User {
 	b.counters.accountID++
 	user.Account.ID = entity.AccountID(b.counters.accountID)
 
-	b.users[user.ID] = user
+	b.bankUsers[user.ID] = user
 	return user
 }
 
-func (b *BankRepository) DeleteUser(id entity.UserID) {
-	delete(b.users, id)
+func (b *Repository) DeleteUser(id entity.UserID) {
+	delete(b.bankUsers, id)
 }
 
-func (b *BankRepository) GetUsers() []entity.User {
-	users := make([]entity.User, 0, len(b.users))
-	for _, user := range b.users {
+func (b *Repository) GetUsers() []entity.User {
+	users := make([]entity.User, 0, len(b.bankUsers))
+	for _, user := range b.bankUsers {
 		users = append(users, user)
 	}
 	return users
 }
 
-func (b *BankRepository) GetUser(id entity.UserID) (entity.User, error) {
-	user, ok := b.users[id]
+func (b *Repository) GetUser(id entity.UserID) (entity.User, error) {
+	user, ok := b.bankUsers[id]
 	if !ok {
 		return entity.User{}, ErrUserNotExist
 	}
 	return user, nil
 }
 
-func (b *BankRepository) SetMoney(id entity.UserID, money float64) (entity.User, error) {
-	user, ok := b.users[id]
+func (b *Repository) GetUserByPassport(passport string) (entity.User, error) {
+	for _, user := range b.bankUsers {
+		if user.Passport == passport {
+			return user, nil
+		}
+	}
+	return entity.User{}, ErrUserNotExist
+}
+
+func (b *Repository) SetMoney(id entity.UserID, money float64) (entity.User, error) {
+	user, ok := b.bankUsers[id]
 	if !ok {
 		b.logger.Warn(ErrUserNotExist.Error())
 		return entity.User{}, ErrUserNotExist
 	}
 	user.Account.Money = money
-	b.users[id] = user
+	b.bankUsers[id] = user
 
 	return user, nil
 }

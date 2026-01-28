@@ -22,8 +22,9 @@ func NewAuthService() AuthService {
 	conf := config.NewAuthServiceConfig(
 		logger,
 		config.ConfigSocket,
+		config.ConfigHMACSecret,
 	)
-	contr := chttp.New(logger)
+	contr := chttp.New(logger, conf.HMACSecret)
 
 	return AuthService{
 		logger:     logger,
