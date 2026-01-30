@@ -5,7 +5,10 @@ import (
 	"os"
 
 	"auth-train/test/internal/api/chttp"
+	"auth-train/test/internal/api/chttp/auth/tokens"
 	"auth-train/test/internal/config"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthService struct {
@@ -22,9 +25,15 @@ func NewAuthService() AuthService {
 	conf := config.NewAuthServiceConfig(
 		logger,
 		config.ConfigSocket,
-		config.ConfigHMACSecret,
+		config.ConfigSecret,
 	)
-	contr := chttp.New(logger, conf.HMACSecret)
+	contr := chttp.New(
+		logger,
+		tokens.AuthJWTConfig{
+			Secret: []byte(conf.Secret),
+			Method: jwt.SigningMethodHS256,
+		},
+	)
 
 	return AuthService{
 		logger:     logger,

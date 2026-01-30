@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	SOCKET_SETTING_NAME      = "SOCKET"
-	SECRET_HMAC_SETTING_NAME = "SECRET_HMAC"
+	SOCKET_SETTING_NAME = "SOCKET"
+	SECRET_SETTING_NAME = "SECRET"
 )
 
 type AuthConfigOpt func(*AuthServiceConfig) error
@@ -29,13 +29,13 @@ func ConfigSocket(conf *AuthServiceConfig) error {
 	return nil
 }
 
-func ConfigHMACSecret(conf *AuthServiceConfig) error {
-	secret := os.Getenv(SECRET_HMAC_SETTING_NAME)
+func ConfigSecret(conf *AuthServiceConfig) error {
+	secret := os.Getenv(SECRET_SETTING_NAME)
 
-	if len(secret) == 0 {
-		return fmt.Errorf("error of %s: it can't be empty", SECRET_HMAC_SETTING_NAME)
+	if len(secret) < 256 {
+		return fmt.Errorf("error of %s: can't be less than 256bits", SECRET_SETTING_NAME)
 	}
-	conf.HMACSecret = secret
+	conf.Secret = secret
 
 	return nil
 }

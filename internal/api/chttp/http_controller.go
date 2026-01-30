@@ -7,6 +7,8 @@ import (
 
 	"github.com/labstack/echo"
 
+	"auth-train/test/internal/api/chttp/auth"
+	"auth-train/test/internal/api/chttp/auth/tokens"
 	"auth-train/test/internal/entity"
 	"auth-train/test/internal/repo"
 )
@@ -17,22 +19,22 @@ type errorResponse struct {
 
 type HttpController struct {
 	e     *echo.Echo
+	auth  auth.Authenticator
 	store repo.Repository
-	auth  authenticator
 
 	logger *slog.Logger
 }
 
-func New(logger *slog.Logger, secret string) HttpController {
+func New(logger *slog.Logger, authConf tokens.AuthJWTConfig) HttpController {
 	return HttpController{
 		e:      echo.New(),
+		auth:   auth.NewAuthenticator(authConf),
 		store:  repo.NewRepository(logger),
-		auth:   newAuthenticator(secret),
 		logger: logger,
 	}
 }
 
-func (h HttpController) Run(socket string) error {
+func (h *HttpController) Run(socket string) error {
 	h.configPath()
 	if err := h.e.Start(socket); err != nil {
 		errRet := fmt.Errorf("%s: %s", ErrStartController, err)
@@ -48,7 +50,7 @@ func (h *HttpController) configPath() {
 	h.e.GET("/get/user", h.handlerGetUser, h.handlerVerifyToken)
 	h.e.GET("/get/user/list", h.handlerGetUserList, h.handlerVerifyToken)
 
-	h.e.POST("/create/user", h.handlerSignUp)
+	h.e.POST("/signup", h.handlerSignUp)
 	h.e.POST("/login", h.handlerLogin)
 
 	h.e.DELETE("/delete/user", h.handlerDeleteUser, h.handlerVerifyToken)
@@ -57,23 +59,29 @@ func (h *HttpController) configPath() {
 }
 
 func (h *HttpController) handlerDeleteUser(ctx echo.Context) error {
-	id, err := validateUserID(ctx)
+	id, err := validateUserID(ctx.QueryParam(userIDParamName))
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, errorResponse{err.Error()})
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrRequestQueryParam.Error(),
+		})
 	}
 	h.store.DeleteUser(id)
-	return ctx.JSON(http.StatusResetContent, nil)
+	return ctx.NoContent(http.StatusResetContent)
 }
 
 func (h *HttpController) handlerGetUser(ctx echo.Context) error {
-	id, err := validateUserID(ctx)
+	id, err := validateUserID(ctx.QueryParam(userIDParamName))
 	if err != nil {
-		return ctx.JSON(http.StatusBadRequest, errorResponse{err.Error()})
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrRequestQueryParam.Error(),
+		})
 	}
 
 	user, err := h.store.GetUser(id)
 	if err != nil {
-		return ctx.JSON(http.StatusNotFound, errorResponse{ErrRequestData.Error()})
+		return ctx.JSON(http.StatusNotFound, errorResponse{
+			ErrResourceNotFound.Error(),
+		})
 	}
 	return ctx.JSON(http.StatusOK, user)
 }
@@ -93,12 +101,16 @@ func (h *HttpController) handlerSetMoney(ctx echo.Context) error {
 	var req request
 
 	if err := ctx.Bind(&req); err != nil {
-		return ctx.JSON(http.StatusBadRequest, errorResponse{ErrBindingScheme.Error()})
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrRequestBody.Error(),
+		})
 	}
 
 	user, err := h.store.SetMoney(req.ID, req.Money)
 	if err != nil {
-		return ctx.JSON(http.StatusNotFound, errorResponse{ErrRequestData.Error()})
+		return ctx.JSON(http.StatusNotFound, errorResponse{
+			ErrResourceNotFound.Error(),
+		})
 	}
 	return ctx.JSON(http.StatusOK, user)
 }

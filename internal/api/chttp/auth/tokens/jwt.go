@@ -1,10 +1,12 @@
-package jwt
+package tokens
 
 import (
-	"auth-train/test/internal/entity"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"auth-train/test/internal/entity"
 )
 
 const (
@@ -12,12 +14,14 @@ const (
 )
 
 type UserJWT struct {
-	HMACSecret string
+	secret []byte
+	method jwt.SigningMethod
 }
 
-func NewUserJWT(secret string) UserJWT {
+func NewUserJWT(jwtConfig AuthJWTConfig) UserJWT {
 	return UserJWT{
-		HMACSecret: secret,
+		secret: jwtConfig.Secret,
+		method: jwtConfig.Method,
 	}
 }
 
@@ -30,15 +34,19 @@ func (u UserJWT) NewUserToken(user entity.User) (string, error) {
 		"iat": time.Now().Unix(),
 	}
 
-	return jwt.NewWithClaims(
-		jwt.SigningMethodHS256,
+	token, err := jwt.NewWithClaims(
+		u.method,
 		claims,
-	).SignedString([]byte(u.HMACSecret))
+	).SignedString(u.secret)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrTokenConfig, err)
+	}
+	return token, nil
 }
 
 func (u UserJWT) keyFunc() jwt.Keyfunc {
 	return func(_ *jwt.Token) (any, error) {
-		return []byte(u.HMACSecret), nil
+		return u.secret, nil
 	}
 }
 
@@ -48,11 +56,12 @@ func (u UserJWT) VerifyUserJWT(accessToken string) (entity.UserID, error) {
 		u.keyFunc(),
 		jwt.WithIssuer(issuer),
 		jwt.WithExpirationRequired(),
-		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}),
+		jwt.WithValidMethods([]string{u.method.Alg()}),
 	)
-
-	if err != nil || !token.Valid {
-		return 0, ErrInvalidToken
+	if err != nil {
+		return 0, fmt.Errorf("%w: %s", ErrInvalidToken, err)
+	} else if !token.Valid {
+		return 0, ErrTokenParsing
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)

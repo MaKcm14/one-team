@@ -3,9 +3,9 @@ package repo
 import "auth-train/test/internal/entity"
 
 type UserConfig struct {
-	Name     string `json:"name"`
-	Surname  string `json:"surname"`
-	Passport string `json:"passport"`
+	Name     string `json:"name,omitempty"`
+	Surname  string `json:"surname,omitempty"`
+	Passport string `json:"passport,omitempty"`
 	PwdHash  []byte `json:"-"`
 }
 
