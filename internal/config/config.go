@@ -12,7 +12,7 @@ type AuthServiceConfig struct {
 	Secret string
 }
 
-func NewAuthServiceConfig(logger *slog.Logger, opts ...AuthConfigOpt) AuthServiceConfig {
+func MustAuthServiceConfig(logger *slog.Logger, opts ...AuthConfigOpt) AuthServiceConfig {
 	logger.Info("AUTH_SERVICE_CONFIGURING_START")
 
 	conf := AuthServiceConfig{}
@@ -20,7 +20,7 @@ func NewAuthServiceConfig(logger *slog.Logger, opts ...AuthConfigOpt) AuthServic
 
 	for _, opt := range opts {
 		if err := opt(&conf); err != nil {
-			errRet := fmt.Errorf("%s: %s", ErrAuthServiceConfiguration, err)
+			errRet := fmt.Errorf("%s: %s", ErrServiceConfig, err)
 			logger.Error(err.Error())
 			panic(errRet.Error())
 		}

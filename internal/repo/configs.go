@@ -14,6 +14,6 @@ func UserConfigToUser(userCfg UserConfig) entity.User {
 	user.Name = userCfg.Name
 	user.Surname = userCfg.Surname
 	user.Passport = userCfg.Passport
-	user.PwdHash = userCfg.PwdHash
+	user.Profile.PwdHash = userCfg.PwdHash
 	return user
 }

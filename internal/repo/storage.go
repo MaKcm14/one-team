@@ -26,7 +26,7 @@ func (b *Repository) CreateUser(userCfg UserConfig) entity.User {
 	user.ID = entity.UserID(b.counters.userID)
 
 	b.counters.accountID++
-	user.Account.ID = entity.AccountID(b.counters.accountID)
+	user.Account.ID = entity.BankAccountID(b.counters.accountID)
 
 	b.bankUsers[user.ID] = user
 	return user
@@ -64,7 +64,6 @@ func (b *Repository) GetUserByPassport(passport string) (entity.User, error) {
 func (b *Repository) SetMoney(id entity.UserID, money float64) (entity.User, error) {
 	user, ok := b.bankUsers[id]
 	if !ok {
-		b.logger.Warn(ErrUserNotExist.Error())
 		return entity.User{}, ErrUserNotExist
 	}
 	user.Account.Money = money

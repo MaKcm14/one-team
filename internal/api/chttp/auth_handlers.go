@@ -75,7 +75,7 @@ func (h *HttpController) handlerLogin(ctx echo.Context) error {
 		})
 	}
 
-	if err := auth.IsPasswordEqual(user.PwdHash, []byte(pwd)); err != nil {
+	if err := auth.IsPasswordEqual(user.Profile.PwdHash, []byte(pwd)); err != nil {
 		return ctx.JSON(http.StatusConflict, errorResponse{
 			ErrInvalidLoginOrPwd.Error(),
 		})

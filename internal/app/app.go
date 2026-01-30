@@ -4,11 +4,11 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/golang-jwt/jwt/v5"
+
 	"auth-train/test/internal/api/chttp"
 	"auth-train/test/internal/api/chttp/auth/tokens"
 	"auth-train/test/internal/config"
-
-	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthService struct {
@@ -19,13 +19,15 @@ type AuthService struct {
 }
 
 func NewAuthService() AuthService {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
-	conf := config.NewAuthServiceConfig(
+	logger := slog.New(
+		slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		}),
+	)
+	conf := config.MustAuthServiceConfig(
 		logger,
-		config.ConfigSocket,
-		config.ConfigSecret,
+		config.WithSocket(),
+		config.WithSecret(),
 	)
 	contr := chttp.New(
 		logger,
@@ -36,9 +38,9 @@ func NewAuthService() AuthService {
 	)
 
 	return AuthService{
-		logger:     logger,
 		conf:       conf,
 		controller: contr,
+		logger:     logger,
 	}
 }
 

@@ -1,8 +1,8 @@
 package entity
 
-type AccountID int
+type BankAccountID int
 
 type BankAccount struct {
-	ID    AccountID `json:"id"`
-	Money float64   `json:"money"`
+	ID    BankAccountID `json:"id"`
+	Money float64       `json:"money"`
 }
