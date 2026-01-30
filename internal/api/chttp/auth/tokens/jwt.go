@@ -26,12 +26,14 @@ func NewUserJWT(jwtConfig AuthJWTConfig) UserJWT {
 }
 
 func (u UserJWT) NewUserToken(user entity.User) (string, error) {
-	claims := jwt.MapClaims{
-		"iss": issuer,
-		"sub": user.ID,
-		"aud": issuer,
-		"exp": time.Now().Add(time.Hour).Unix(),
-		"iat": time.Now().Unix(),
+	claims := claimsJWT{
+		UserClaims: userToUserClaims(user),
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    issuer,
+			Audience:  []string{issuer},
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
 	}
 
 	token, err := jwt.NewWithClaims(
@@ -50,23 +52,21 @@ func (u UserJWT) keyFunc() jwt.Keyfunc {
 	}
 }
 
-func (u UserJWT) VerifyUserJWT(accessToken string) (entity.UserID, error) {
-	token, err := jwt.Parse(
+func (u UserJWT) VerifyUserJWT(accessToken string) (UserClaims, error) {
+	claims := claimsJWT{}
+	token, err := jwt.ParseWithClaims(
 		accessToken,
+		&claims,
 		u.keyFunc(),
 		jwt.WithIssuer(issuer),
 		jwt.WithExpirationRequired(),
 		jwt.WithValidMethods([]string{u.method.Alg()}),
 	)
-	if err != nil {
-		return 0, fmt.Errorf("%w: %s", ErrInvalidToken, err)
-	} else if !token.Valid {
-		return 0, ErrTokenParsing
-	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok {
-		return 0, ErrInvalidToken
+	if err != nil {
+		return UserClaims{}, fmt.Errorf("%w: %s", ErrInvalidToken, err)
+	} else if !token.Valid {
+		return UserClaims{}, ErrTokenParsing
 	}
-	return entity.UserID(claims["sub"].(float64)), nil
+	return claims.UserClaims, nil
 }

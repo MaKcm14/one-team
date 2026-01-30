@@ -3,10 +3,11 @@ package repo
 import "auth-train/test/internal/entity"
 
 type UserConfig struct {
-	Name     string `json:"name,omitempty"`
-	Surname  string `json:"surname,omitempty"`
-	Passport string `json:"passport,omitempty"`
-	PwdHash  []byte `json:"-"`
+	Name        string `json:"name,omitempty"`
+	Surname     string `json:"surname,omitempty"`
+	Passport    string `json:"passport,omitempty"`
+	AdminStatus bool   `json:"admin,omitempty"`
+	PwdHash     []byte `json:"-"`
 }
 
 func UserConfigToUser(userCfg UserConfig) entity.User {
@@ -15,5 +16,6 @@ func UserConfigToUser(userCfg UserConfig) entity.User {
 	user.Surname = userCfg.Surname
 	user.Passport = userCfg.Passport
 	user.Profile.PwdHash = userCfg.PwdHash
+	user.Profile.AdminStatus = userCfg.AdminStatus
 	return user
 }

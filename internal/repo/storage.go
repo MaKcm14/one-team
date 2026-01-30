@@ -1,8 +1,9 @@
 package repo
 
 import (
-	"auth-train/test/internal/entity"
 	"log/slog"
+
+	"auth-train/test/internal/entity"
 )
 
 type Repository struct {
@@ -70,4 +71,15 @@ func (b *Repository) SetMoney(id entity.UserID, money float64) (entity.User, err
 	b.bankUsers[id] = user
 
 	return user, nil
+}
+
+func (b *Repository) SetAdminStatus(id entity.UserID, status bool) error {
+	user, ok := b.bankUsers[id]
+	if !ok {
+		return ErrUserNotExist
+	}
+	user.Profile.AdminStatus = status
+	b.bankUsers[id] = user
+
+	return nil
 }

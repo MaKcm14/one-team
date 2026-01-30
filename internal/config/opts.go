@@ -2,8 +2,11 @@ package config
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"regexp"
+	"runtime"
+	"sync"
 )
 
 const (
@@ -31,12 +34,47 @@ func WithSocket() AuthConfigOpt {
 	}
 }
 
+func genSecret() string {
+	const size = 256
+	var (
+		buff     = make([]byte, size)
+		wg       = sync.WaitGroup{}
+		poolSize = runtime.GOMAXPROCS(0)
+		intNum   = size / poolSize
+	)
+
+	wg.Add(poolSize)
+	for i := 0; i != poolSize; i++ {
+		part := buff[i*intNum:]
+		if i != poolSize-1 {
+			part = buff[i*intNum : (i+1)*intNum]
+		}
+
+		go func() {
+			defer wg.Done()
+			genSecretPart(part)
+		}()
+	}
+	wg.Wait()
+
+	return string(buff)
+}
+
+func genSecretPart(slice []byte) {
+	for i := 0; i != len(slice); i++ {
+		val := []rune(fmt.Sprintf("%X", rand.Intn(16)))[0]
+		slice[i] = byte(val)
+	}
+}
+
 func WithSecret() AuthConfigOpt {
 	return func(conf *AuthServiceConfig) error {
 		secret := os.Getenv(SECRET_SETTING_NAME)
 
-		if len(secret) < 256 {
+		if len(secret) < 256 && secret != "auto" {
 			return fmt.Errorf("error of %s: can't be less than 256bits", SECRET_SETTING_NAME)
+		} else if secret == "auto" {
+			secret = genSecret()
 		}
 		conf.Secret = secret
 

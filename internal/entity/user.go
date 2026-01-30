@@ -3,7 +3,8 @@ package entity
 type UserID int
 
 type UserProfile struct {
-	PwdHash []byte
+	AdminStatus bool   `json:"admin"`
+	PwdHash     []byte `json:"-"`
 }
 
 type User struct {
@@ -12,5 +13,5 @@ type User struct {
 	Surname  string      `json:"surname"`
 	Passport string      `json:"passport"`
 	Account  BankAccount `json:"bank_account"`
-	Profile  UserProfile `json:"-"`
+	Profile  UserProfile `json:"profile"`
 }

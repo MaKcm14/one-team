@@ -35,6 +35,18 @@ func New(logger *slog.Logger, authConf tokens.AuthJWTConfig) HttpController {
 }
 
 func (h *HttpController) Run(socket string) error {
+	// DEBUG: delete this. Easy-admin-setter is below here:
+	admin := repo.UserConfig{
+		Name:        "admin",
+		Surname:     "admin",
+		Passport:    "admin",
+		AdminStatus: true,
+	}
+	hash, _ := auth.HashPassword("admin")
+	admin.PwdHash = hash
+	h.store.CreateUser(admin)
+	// END-ADMIN-DEFINING
+
 	h.configPath()
 	if err := h.e.Start(socket); err != nil {
 		errRet := fmt.Errorf("%s: %s", ErrStartController, err)
@@ -47,15 +59,16 @@ func (h *HttpController) Run(socket string) error {
 func (h *HttpController) configPath() {
 	h.e.File("/index.html", "../../web/api/static/index.html")
 
-	h.e.GET("/get/user", h.handlerGetUser, h.handlerVerifyToken)
-	h.e.GET("/get/user/list", h.handlerGetUserList, h.handlerVerifyToken)
+	h.e.GET("/get/user", h.handlerGetUser, h.handlerVerifyToken, h.handlerGetUserAC)
+	h.e.GET("/get/user/list", h.handlerGetUserList, h.handlerVerifyToken, h.handlerGetUserListAC)
 
 	h.e.POST("/signup", h.handlerSignUp)
 	h.e.POST("/login", h.handlerLogin)
 
-	h.e.DELETE("/delete/user", h.handlerDeleteUser, h.handlerVerifyToken)
+	h.e.DELETE("/delete/user", h.handlerDeleteUser, h.handlerVerifyToken, h.handlerDeleteUserAC)
 
-	h.e.PATCH("/set/money", h.handlerSetMoney, h.handlerVerifyToken)
+	h.e.PATCH("/set/money", h.handlerSetMoney, h.handlerVerifyToken, h.handlerSetMoneyAC)
+	h.e.PATCH("/set/admin/status", h.handlerSetAdminStatus, h.handlerVerifyToken, h.handlerSetAdminStatusAC)
 }
 
 func (h *HttpController) handlerDeleteUser(ctx echo.Context) error {
@@ -113,4 +126,26 @@ func (h *HttpController) handlerSetMoney(ctx echo.Context) error {
 		})
 	}
 	return ctx.JSON(http.StatusOK, user)
+}
+
+func (h *HttpController) handlerSetAdminStatus(ctx echo.Context) error {
+	type request struct {
+		ID          entity.UserID `json:"user_id"`
+		AdminStatus bool          `json:"admin"`
+	}
+	var req request
+
+	if err := ctx.Bind(&req); err != nil {
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrRequestBody.Error(),
+		})
+	}
+
+	err := h.store.SetAdminStatus(req.ID, req.AdminStatus)
+	if err != nil {
+		return ctx.JSON(http.StatusNotFound, errorResponse{
+			ErrResourceNotFound.Error(),
+		})
+	}
+	return ctx.NoContent(http.StatusOK)
 }

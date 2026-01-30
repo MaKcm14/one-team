@@ -7,7 +7,13 @@ import (
 	"github.com/labstack/echo"
 
 	"auth-train/test/internal/api/chttp/auth"
+	"auth-train/test/internal/api/chttp/auth/tokens"
+	"auth-train/test/internal/entity"
 	"auth-train/test/internal/repo"
+)
+
+const (
+	userClaimsKey = "user_claims"
 )
 
 func (h *HttpController) handlerSignUp(ctx echo.Context) error {
@@ -38,8 +44,12 @@ func (h *HttpController) handlerSignUp(ctx echo.Context) error {
 		})
 	}
 
-	_, pwd, err := auth.ExtractCreds(ctx)
-	if err != nil {
+	login, pwd, err := auth.ExtractCreds(ctx)
+	if login != userCfg.Passport {
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrAuthData.Error(),
+		})
+	} else if err != nil {
 		return ctx.JSON(http.StatusBadRequest, errorResponse{
 			ErrAuthData.Error(),
 		})
@@ -100,17 +110,118 @@ func (h *HttpController) handlerVerifyToken(handler echo.HandlerFunc) echo.Handl
 			})
 		}
 
-		id, err := h.auth.UserToken.VerifyUserJWT(token)
+		userClaims, err := h.auth.UserToken.VerifyUserJWT(token)
 		if err != nil {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrInvalidToken.Error(),
 			})
 		}
 
-		_, err = h.store.GetUser(id)
+		_, err = h.store.GetUser(userClaims.ID)
 		if err != nil {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrInvalidToken.Error(),
+			})
+		}
+		ctx.Set(userClaimsKey, userClaims)
+		return handler(ctx)
+	}
+}
+
+func (h *HttpController) handlerGetUserAC(handler echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		if !ok {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
+			})
+		}
+
+		id, err := validateUserID(ctx.QueryParam(userIDParamName))
+		if !userClaims.AdminStatus && err == nil && userClaims.ID != id {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
+			})
+		} else if err != nil {
+			return ctx.JSON(http.StatusBadRequest, errorResponse{
+				ErrRequestQueryParam.Error(),
+			})
+		}
+		return handler(ctx)
+	}
+}
+
+func (h *HttpController) handlerGetUserListAC(handler echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		if !ok || !userClaims.AdminStatus {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
+			})
+		}
+		return handler(ctx)
+	}
+}
+
+func (h *HttpController) handlerDeleteUserAC(handler echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		if !ok {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
+			})
+		}
+
+		id, err := validateUserID(ctx.QueryParam(userIDParamName))
+		if !userClaims.AdminStatus && err == nil && userClaims.ID != id {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
+			})
+		} else if err != nil {
+			return ctx.JSON(http.StatusBadRequest, errorResponse{
+				ErrRequestQueryParam.Error(),
+			})
+		}
+		return handler(ctx)
+	}
+}
+
+func (h *HttpController) handlerSetMoneyAC(handler echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		type request struct {
+			ID    entity.UserID `json:"user_id"`
+			Money float64       `json:"money"`
+		}
+		var req request
+
+		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		if !ok {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
+			})
+		}
+
+		if err := ctx.Bind(&req); err != nil {
+			return ctx.JSON(http.StatusBadRequest, errorResponse{
+				ErrRequestBody.Error(),
+			})
+		}
+
+		if req.ID != userClaims.ID && !userClaims.AdminStatus {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
+			})
+		}
+		return handler(ctx)
+	}
+}
+
+func (h *HttpController) handlerSetAdminStatusAC(handler echo.HandlerFunc) echo.HandlerFunc {
+	return func(ctx echo.Context) error {
+		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		if !ok || !userClaims.AdminStatus {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrPermissionDenied.Error(),
 			})
 		}
 		return handler(ctx)
