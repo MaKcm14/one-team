@@ -147,5 +147,6 @@ func (h *HttpController) handlerSetAdminStatus(ctx echo.Context) error {
 			ErrResourceNotFound.Error(),
 		})
 	}
+	h.auth.UserAuth.TokenCoolDown(req.ID)
 	return ctx.NoContent(http.StatusOK)
 }

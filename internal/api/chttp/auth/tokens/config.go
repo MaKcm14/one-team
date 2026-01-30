@@ -6,3 +6,8 @@ type AuthJWTConfig struct {
 	Secret []byte
 	Method jwt.SigningMethod
 }
+
+type JWT struct {
+	Token string
+	JTI   string
+}

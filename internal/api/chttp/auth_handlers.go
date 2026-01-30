@@ -1,7 +1,10 @@
 package chttp
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/labstack/echo"
@@ -13,7 +16,7 @@ import (
 )
 
 const (
-	userClaimsKey = "user_claims"
+	userJWTCtxKey = "userJWTClaims"
 )
 
 func (h *HttpController) handlerSignUp(ctx echo.Context) error {
@@ -91,14 +94,15 @@ func (h *HttpController) handlerLogin(ctx echo.Context) error {
 		})
 	}
 
-	token, err := h.auth.UserToken.NewUserToken(user)
+	tokenJWT, err := h.auth.UserAuth.UserToken.NewUserToken(user)
 	if err != nil {
 		h.logger.Error(fmt.Sprintf("error of the %s: %s", op, err))
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
 			ErrAuthFailed.Error(),
 		})
 	}
-	return ctx.JSON(http.StatusOK, authInfo{token})
+	h.auth.UserAuth.RegisterToken(user.ID, tokenJWT.JTI)
+	return ctx.JSON(http.StatusOK, authInfo{tokenJWT.Token})
 }
 
 func (h *HttpController) handlerVerifyToken(handler echo.HandlerFunc) echo.HandlerFunc {
@@ -110,27 +114,33 @@ func (h *HttpController) handlerVerifyToken(handler echo.HandlerFunc) echo.Handl
 			})
 		}
 
-		userClaims, err := h.auth.UserToken.VerifyUserJWT(token)
+		claims, err := h.auth.UserAuth.UserToken.VerifyUserJWT(token)
 		if err != nil {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrInvalidToken.Error(),
 			})
 		}
 
-		_, err = h.store.GetUser(userClaims.ID)
+		_, err = h.store.GetUser(claims.UserPayload.ID)
 		if err != nil {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrInvalidToken.Error(),
 			})
 		}
-		ctx.Set(userClaimsKey, userClaims)
+
+		if h.auth.UserAuth.IsTokenCoolDown(claims.UserPayload.ID, claims.ID) {
+			return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				ErrInvalidToken.Error(),
+			})
+		}
+		ctx.Set(userJWTCtxKey, claims)
 		return handler(ctx)
 	}
 }
 
 func (h *HttpController) handlerGetUserAC(handler echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		claims, ok := ctx.Get(userJWTCtxKey).(tokens.UserClaimsJWT)
 		if !ok {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
@@ -138,7 +148,7 @@ func (h *HttpController) handlerGetUserAC(handler echo.HandlerFunc) echo.Handler
 		}
 
 		id, err := validateUserID(ctx.QueryParam(userIDParamName))
-		if !userClaims.AdminStatus && err == nil && userClaims.ID != id {
+		if !claims.UserPayload.AdminStatus && err == nil && claims.UserPayload.ID != id {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
 			})
@@ -153,8 +163,8 @@ func (h *HttpController) handlerGetUserAC(handler echo.HandlerFunc) echo.Handler
 
 func (h *HttpController) handlerGetUserListAC(handler echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
-		if !ok || !userClaims.AdminStatus {
+		claims, ok := ctx.Get(userJWTCtxKey).(tokens.UserClaimsJWT)
+		if !ok || !claims.UserPayload.AdminStatus {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
 			})
@@ -165,7 +175,7 @@ func (h *HttpController) handlerGetUserListAC(handler echo.HandlerFunc) echo.Han
 
 func (h *HttpController) handlerDeleteUserAC(handler echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		claims, ok := ctx.Get(userJWTCtxKey).(tokens.UserClaimsJWT)
 		if !ok {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
@@ -173,7 +183,7 @@ func (h *HttpController) handlerDeleteUserAC(handler echo.HandlerFunc) echo.Hand
 		}
 
 		id, err := validateUserID(ctx.QueryParam(userIDParamName))
-		if !userClaims.AdminStatus && err == nil && userClaims.ID != id {
+		if !claims.UserPayload.AdminStatus && err == nil && claims.UserPayload.ID != id {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
 			})
@@ -194,7 +204,7 @@ func (h *HttpController) handlerSetMoneyAC(handler echo.HandlerFunc) echo.Handle
 		}
 		var req request
 
-		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
+		claims, ok := ctx.Get(userJWTCtxKey).(tokens.UserClaimsJWT)
 		if !ok {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
@@ -207,19 +217,22 @@ func (h *HttpController) handlerSetMoneyAC(handler echo.HandlerFunc) echo.Handle
 			})
 		}
 
-		if req.ID != userClaims.ID && !userClaims.AdminStatus {
+		if req.ID != claims.UserPayload.ID && !claims.UserPayload.AdminStatus {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
 			})
 		}
+		raw, _ := json.Marshal(req)
+		ctx.Request().Body = io.NopCloser(bytes.NewReader(raw))
+
 		return handler(ctx)
 	}
 }
 
 func (h *HttpController) handlerSetAdminStatusAC(handler echo.HandlerFunc) echo.HandlerFunc {
 	return func(ctx echo.Context) error {
-		userClaims, ok := ctx.Get(userClaimsKey).(tokens.UserClaims)
-		if !ok || !userClaims.AdminStatus {
+		claims, ok := ctx.Get(userJWTCtxKey).(tokens.UserClaimsJWT)
+		if !ok || !claims.UserPayload.AdminStatus {
 			return ctx.JSON(http.StatusUnauthorized, errorResponse{
 				ErrPermissionDenied.Error(),
 			})

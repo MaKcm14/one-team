@@ -20,12 +20,12 @@ const (
 )
 
 type Authenticator struct {
-	UserToken tokens.UserJWT
+	UserAuth UserAuthenticator
 }
 
 func NewAuthenticator(conf tokens.AuthJWTConfig) Authenticator {
 	return Authenticator{
-		UserToken: tokens.NewUserJWT(conf),
+		UserAuth: NewUserAuthenticator(conf),
 	}
 }
 

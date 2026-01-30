@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 
 	"auth-train/test/internal/entity"
 )
@@ -25,14 +26,15 @@ func NewUserJWT(jwtConfig AuthJWTConfig) UserJWT {
 	}
 }
 
-func (u UserJWT) NewUserToken(user entity.User) (string, error) {
-	claims := claimsJWT{
-		UserClaims: userToUserClaims(user),
+func (u UserJWT) NewUserToken(user entity.User) (JWT, error) {
+	claims := UserClaimsJWT{
+		UserPayload: userToUserPayloadJWT(user),
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    issuer,
 			Audience:  []string{issuer},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			ID:        uuid.New().String(),
 		},
 	}
 
@@ -41,9 +43,12 @@ func (u UserJWT) NewUserToken(user entity.User) (string, error) {
 		claims,
 	).SignedString(u.secret)
 	if err != nil {
-		return "", fmt.Errorf("%w: %s", ErrTokenConfig, err)
+		return JWT{}, fmt.Errorf("%w: %s", ErrTokenConfig, err)
 	}
-	return token, nil
+	return JWT{
+		Token: token,
+		JTI:   claims.ID,
+	}, nil
 }
 
 func (u UserJWT) keyFunc() jwt.Keyfunc {
@@ -52,8 +57,8 @@ func (u UserJWT) keyFunc() jwt.Keyfunc {
 	}
 }
 
-func (u UserJWT) VerifyUserJWT(accessToken string) (UserClaims, error) {
-	claims := claimsJWT{}
+func (u UserJWT) VerifyUserJWT(accessToken string) (UserClaimsJWT, error) {
+	claims := UserClaimsJWT{}
 	token, err := jwt.ParseWithClaims(
 		accessToken,
 		&claims,
@@ -64,9 +69,9 @@ func (u UserJWT) VerifyUserJWT(accessToken string) (UserClaims, error) {
 	)
 
 	if err != nil {
-		return UserClaims{}, fmt.Errorf("%w: %s", ErrInvalidToken, err)
+		return UserClaimsJWT{}, fmt.Errorf("%w: %s", ErrInvalidToken, err)
 	} else if !token.Valid {
-		return UserClaims{}, ErrTokenParsing
+		return UserClaimsJWT{}, ErrTokenParsing
 	}
-	return claims.UserClaims, nil
+	return claims, nil
 }
