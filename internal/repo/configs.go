@@ -11,11 +11,13 @@ type UserConfig struct {
 }
 
 func UserConfigToUser(userCfg UserConfig) entity.User {
-	user := entity.User{}
-	user.Name = userCfg.Name
-	user.Surname = userCfg.Surname
-	user.Passport = userCfg.Passport
-	user.Profile.PwdHash = userCfg.PwdHash
-	user.Profile.AdminStatus = userCfg.AdminStatus
-	return user
+	return entity.User{
+		Name:     userCfg.Name,
+		Surname:  userCfg.Surname,
+		Passport: userCfg.Passport,
+		Profile: entity.UserProfile{
+			PwdHash:     userCfg.PwdHash,
+			AdminStatus: userCfg.AdminStatus,
+		},
+	}
 }
