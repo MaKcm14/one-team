@@ -4,10 +4,15 @@ CREATE SCHEMA IF NOT EXISTS usecase;
 CREATE TABLE IF NOT EXISTS usecase.divisions (
     id                SERIAL PRIMARY KEY,
     name              TEXT NOT NULL,
-    type              TEXT NOT NULL CHECK (type in ('division', 'directorate', 'department', 'unit', 'group')),
+    type              TEXT NOT NULL CHECK (type IN ('division', 'directorate', 'department', 'unit', 'group')),
     state_size        INT NOT NULL,
     superdivision_id  INT REFERENCES usecase.divisions(id) ON DELETE RESTRICT,
-    UNIQUE(name, type)
+    UNIQUE (name, type),
+    CONSTRAINT superdivision_id_constraint_by_type
+        CHECK ( (type='division' AND superdivision_id IS NULL) 
+            OR  
+            (type!='division' AND superdivision_id IS NOT NULL)
+        )
 );
 
 CREATE TABLE IF NOT EXISTS usecase.titles (
@@ -30,9 +35,9 @@ CREATE TABLE IF NOT EXISTS usecase.employees (
     last_name       TEXT NOT NULL,
     patronymic      TEXT,
     address         TEXT NOT NULL,
-    title_id        INT REFERENCES usecase.titles(id) ON DELETE RESTRICT,
+    title_id        INT NOT NULL REFERENCES usecase.titles(id) ON DELETE RESTRICT,
     hiring_date     DATE NOT NULL,
-    unit_id         INT REFERENCES usecase.divisions(id) ON DELETE RESTRICT,
+    unit_id         INT NOT NULL REFERENCES usecase.divisions(id) ON DELETE RESTRICT,
     education       TEXT NOT NULL,
     salary          NUMERIC(10, 2) NOT NULL,
     citizenship_id  INT NOT NULL REFERENCES usecase.citizenships(id) ON DELETE RESTRICT
@@ -52,9 +57,9 @@ CREATE TABLE IF NOT EXISTS app_realm.rights (
 );
 
 CREATE TABLE IF NOT EXISTS app_realm.role_rights_mapping (
-    role_id   INT REFERENCES app_realm.roles(id) ON DELETE RESTRICT,
-    right_id  INT REFERENCES app_realm.rights(id) ON DELETE RESTRICT,
-    PRIMARY KEY(role_id, right_id)
+    role_id   INT NOT NULL REFERENCES app_realm.roles(id) ON DELETE RESTRICT,
+    right_id  INT NOT NULL REFERENCES app_realm.rights(id) ON DELETE RESTRICT,
+    PRIMARY KEY (role_id, right_id)
 );
 
 CREATE TABLE IF NOT EXISTS app_realm.users (
@@ -62,7 +67,7 @@ CREATE TABLE IF NOT EXISTS app_realm.users (
     login     TEXT UNIQUE NOT NULL,
     hash_pwd  TEXT NOT NULL,
     salt      INT  NOT NULL,
-    role      INT REFERENCES app_realm.roles(id) ON DELETE RESTRICT
+    role_id   INT NOT NULL REFERENCES app_realm.roles(id) ON DELETE RESTRICT
 );
 
 -- Configuring the app_realm's objects.
