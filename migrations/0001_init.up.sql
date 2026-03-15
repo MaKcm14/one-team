@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS usecase.divisions (
     superdivision_id  INT REFERENCES usecase.divisions(id) ON DELETE RESTRICT,
     UNIQUE (name, type),
     CONSTRAINT superdivision_id_constraint_by_type
-        CHECK ( (type='division' AND superdivision_id IS NULL) 
+        CHECK (
+            (type='division' AND superdivision_id IS NULL)
             OR  
             (type!='division' AND superdivision_id IS NOT NULL)
         )
