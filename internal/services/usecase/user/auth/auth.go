@@ -6,18 +6,25 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/MaKcm14/one-team/internal/config"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 type Interactor struct {
 	log      *slog.Logger
+	cfg      config.AuthConfig
 	authRepo user.IAuthRepo
 }
 
-func NewInteractor(log *slog.Logger, authRepo user.IAuthRepo) Interactor {
+func NewInteractor(
+	log *slog.Logger,
+	cfg config.AuthConfig,
+	authRepo user.IAuthRepo,
+) Interactor {
 	return Interactor{
 		log:      log,
+		cfg:      cfg,
 		authRepo: authRepo,
 	}
 }
@@ -31,7 +38,7 @@ func (auth Interactor) Login(ctx context.Context, creds user.Credentials) error 
 		return fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
 	}
 
-	err = auth.checkPassword(userInfo.HashPWD, creds.Password)
+	err = auth.checkPassword(userInfo.HashPWD, creds.Password+fmt.Sprint(userInfo.Salt+auth.cfg.GlobalSalt))
 	if err != nil {
 		return user.ErrWrongPassword
 	}

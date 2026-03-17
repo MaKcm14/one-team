@@ -2,6 +2,7 @@ package token
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 
@@ -10,7 +11,9 @@ import (
 )
 
 const (
-	issuerName = "hrm.oneteam.com"
+	IssuerName = "hrm.oneteam.com"
+
+	AccessTokenTTL = 5 * time.Minute
 )
 
 type Claims struct {
@@ -40,7 +43,7 @@ func (a AccessToken) VerifyAccessToken(accessToken string) (Claims, error) {
 		accessToken,
 		&claims,
 		a.getKey,
-		jwt.WithIssuer(issuerName),
+		jwt.WithIssuer(IssuerName),
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Name}),
 		jwt.WithExpirationRequired(),
 	)
@@ -52,4 +55,14 @@ func (a AccessToken) VerifyAccessToken(accessToken string) (Claims, error) {
 		return Claims{}, ErrTokenNotValid
 	}
 	return claims, nil
+}
+
+func (a AccessToken) IssueAccessToken(claims Claims) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	signedToken, err := token.SignedString(a.cfg.Secret)
+	if err != nil {
+		return "", fmt.Errorf("%w: %s", ErrTokenIssue, err)
+	}
+	return signedToken, nil
 }
