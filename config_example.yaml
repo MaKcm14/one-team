@@ -5,3 +5,6 @@ controller:
         salt: 132784681
 
         secret: "SfouihcnswvUWIO_12f1biio"
+
+db:
+    dsn: 'dsn'

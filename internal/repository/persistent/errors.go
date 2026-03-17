@@ -1,0 +1,9 @@
+package persistent
+
+import "errors"
+
+var (
+	ErrConnWithDB   = errors.New("persistent: error of setting the connection with the DB")
+	ErrQueryExec    = errors.New("persistent: error of executing the query")
+	ErrUserNotFound = errors.New("persistent: error of searching the user: not found")
+)

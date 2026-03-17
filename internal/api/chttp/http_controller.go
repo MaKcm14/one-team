@@ -16,7 +16,8 @@ type Controller struct {
 	e   *echo.Echo
 	log *slog.Logger
 
-	cfg config.ControllerConfig
+	cfg    config.ControllerConfig
+	authMW auth.Authenticator
 }
 
 func New(log *slog.Logger, cfg config.ControllerConfig) *Controller {
@@ -39,11 +40,9 @@ func (c Controller) Run() error {
 }
 
 func (c Controller) configEndpoints() {
-	authMW := auth.NewMW(c.cfg.AuthCfg)
-
 	c.e.Use(
 		mw.Recovery(c.log),
 		mw.LoggerMW(c.log),
-		authMW.VerifyAccessToken(),
+		c.authMW.VerifyAccessTokenMW(),
 	)
 }

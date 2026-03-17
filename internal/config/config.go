@@ -8,6 +8,10 @@ import (
 
 const DefaultConfigFilePath = "./config.yaml"
 
+type DBConfig struct {
+	DSN string `yaml:"dsn" env-required:"true"`
+}
+
 type AuthConfig struct {
 	Secret     string `yaml:"secret" env-required:"true"`
 	GlobalSalt int    `yaml:"salt" env-required:"true"`
@@ -19,6 +23,7 @@ type ControllerConfig struct {
 }
 
 type Config struct {
+	DBCfg         DBConfig         `yaml:"db"`
 	ControllerCfg ControllerConfig `yaml:"controller"`
 }
 

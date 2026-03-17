@@ -8,23 +8,29 @@ import (
 
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth/token"
 	"github.com/MaKcm14/one-team/internal/config"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 type errorResponse struct {
 	Error string `json:"error"`
 }
 
-type AuthMiddleware struct {
-	acToken token.AccessToken
+type Authenticator struct {
+	acToken     token.AccessToken
+	authService user.IAuthService
 }
 
-func NewMW(cfg config.AuthConfig) AuthMiddleware {
-	return AuthMiddleware{
-		acToken: token.NewAccessToken(cfg),
+func NewMW(
+	cfg config.AuthConfig,
+	authService user.IAuthService,
+) Authenticator {
+	return Authenticator{
+		acToken:     token.NewAccessToken(cfg),
+		authService: authService,
 	}
 }
 
-func (a AuthMiddleware) VerifyAccessToken() echo.MiddlewareFunc {
+func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(ctx echo.Context) error {
 			const bearerAuth = "Bearer "
@@ -35,9 +41,8 @@ func (a AuthMiddleware) VerifyAccessToken() echo.MiddlewareFunc {
 					Error: ErrTokenNotValid.Error(),
 				})
 			}
-			rawToken := strings.TrimPrefix(authHeader, bearerAuth)
 
-			claims, err := a.acToken.VerifyAccessToken(rawToken)
+			claims, err := a.acToken.VerifyAccessToken(authHeader[len(bearerAuth):])
 			if err != nil {
 				return ctx.JSON(http.StatusUnauthorized, errorResponse{
 					Error: ErrTokenNotValid.Error(),

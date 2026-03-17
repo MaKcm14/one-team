@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/MaKcm14/one-team/internal/config"
-	"github.com/MaKcm14/one-team/internal/services/usecase/user/auth"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 const (
@@ -16,8 +16,8 @@ const (
 type Claims struct {
 	jwt.RegisteredClaims
 
-	SessionID string          `json:"sid"`
-	UserData  auth.UserClaims `json:"user"`
+	SessionID string      `json:"sid"`
+	UserData  user.Claims `json:"user"`
 }
 
 type AccessToken struct {
