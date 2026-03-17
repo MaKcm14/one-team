@@ -1,4 +1,7 @@
 controller:
     socket: 'localhost:8080'
 
-    salt: 132784681
+    auth:
+        salt: 132784681
+
+        secret: "SfouihcnswvUWIO_12f1biio"

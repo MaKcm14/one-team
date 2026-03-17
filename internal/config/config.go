@@ -8,9 +8,14 @@ import (
 
 const DefaultConfigFilePath = "./config.yaml"
 
-type ControllerConfig struct {
-	Socket     string `yaml:"socket" env-required:"true"`
+type AuthConfig struct {
+	Secret     string `yaml:"secret" env-required:"true"`
 	GlobalSalt int    `yaml:"salt" env-required:"true"`
+}
+
+type ControllerConfig struct {
+	Socket  string     `yaml:"socket" env-required:"true"`
+	AuthCfg AuthConfig `yaml:"auth" env-required:"true"`
 }
 
 type Config struct {

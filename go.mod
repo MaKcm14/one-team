@@ -3,6 +3,7 @@ module github.com/MaKcm14/one-team
 go 1.24.6
 
 require (
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/labstack/echo/v4 v4.15.1
 )

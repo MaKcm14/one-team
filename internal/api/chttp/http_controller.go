@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/labstack/echo/v4"
+
 	"github.com/MaKcm14/one-team/internal/api"
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw"
+	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth"
 	"github.com/MaKcm14/one-team/internal/config"
-	"github.com/labstack/echo/v4"
 )
 
 type Controller struct {
@@ -37,8 +39,11 @@ func (c Controller) Run() error {
 }
 
 func (c Controller) configEndpoints() {
+	authMW := auth.NewMW(c.cfg.AuthCfg)
+
 	c.e.Use(
 		mw.Recovery(c.log),
 		mw.LoggerMW(c.log),
+		authMW.VerifyAccessToken(),
 	)
 }
