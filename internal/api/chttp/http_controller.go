@@ -6,7 +6,6 @@ import (
 
 	"github.com/MaKcm14/one-team/internal/api"
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw"
-	"github.com/MaKcm14/one-team/internal/api/chttp/mw/log"
 	"github.com/MaKcm14/one-team/internal/config"
 	"github.com/labstack/echo/v4"
 )
@@ -40,6 +39,6 @@ func (c Controller) Run() error {
 func (c Controller) configEndpoints() {
 	c.e.Use(
 		mw.Recovery(c.log),
-		log.LoggerMW(c.log),
+		mw.LoggerMW(c.log),
 	)
 }

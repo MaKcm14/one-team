@@ -16,8 +16,8 @@ func Recovery(log *slog.Logger) echo.MiddlewareFunc {
 					b := strings.Builder{}
 
 					b.WriteString(fmt.Sprintf("RECOVER: catch error: %s\n", err))
-					b.WriteString(fmt.Sprintf("REQUEST: %s\n", ExtractRequestInfo(ctx)))
-					b.WriteString(fmt.Sprintf("RESPONSE: %s\n", ExtractResponseInfo(ctx)))
+					b.WriteString(fmt.Sprintf("REQUEST: %s\n", extractRequestInfo(ctx)))
+					b.WriteString(fmt.Sprintf("RESPONSE: %s\n", extractResponseInfo(ctx)))
 
 					log.Error(b.String())
 				}

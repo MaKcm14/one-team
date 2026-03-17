@@ -32,7 +32,7 @@ func formatBody(r io.Reader) (formatStr string, body []byte) {
 	return msg, body
 }
 
-func ExtractRequestInfo(ctx echo.Context) string {
+func extractRequestInfo(ctx echo.Context) string {
 	b := strings.Builder{}
 
 	b.WriteString(GetLogMsg("IP", ctx.Request().RemoteAddr))
@@ -51,7 +51,7 @@ func ExtractRequestInfo(ctx echo.Context) string {
 	return b.String()
 }
 
-func ExtractResponseInfo(ctx echo.Context) string {
+func extractResponseInfo(ctx echo.Context) string {
 	b := strings.Builder{}
 
 	b.WriteString(GetLogMsg("IP", ctx.Request().RemoteAddr))
