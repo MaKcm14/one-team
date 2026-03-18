@@ -3,6 +3,7 @@ package auth
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -45,12 +46,34 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 				})
 			}
 
+			session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+			if err != nil {
+				return ctx.JSON(http.StatusInternalServerError, errorResponse{
+					Error: ErrHandleRequest.Error(),
+				})
+			}
+			rawSessionID := session.Values[sessionIDCookieKey]
+
+			sessionID, ok := rawSessionID.(string)
+			if !ok {
+				return ctx.JSON(http.StatusInternalServerError, errorResponse{
+					Error: ErrHandleRequest.Error(),
+				})
+			}
+			_, expAt, ok := a.tokens.AccessTokens.GetWithExpiration(sessionID)
+			if !ok || expAt.Before(time.Now()) {
+				return ctx.JSON(http.StatusUnauthorized, errorResponse{
+					Error: ErrTokenNotValid.Error(),
+				})
+			}
+
 			claims, err := a.acToken.VerifyAccessToken(authHeader[len(bearerAuth):])
 			if err != nil {
 				return ctx.JSON(http.StatusUnauthorized, errorResponse{
 					Error: ErrTokenNotValid.Error(),
 				})
 			}
+
 			ctx.Set(TokenClaimsCtxKey, claims)
 
 			return next(ctx)

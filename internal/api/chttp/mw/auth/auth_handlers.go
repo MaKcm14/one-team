@@ -43,6 +43,35 @@ func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 	return a.issueTokens(eCtx, dto)
 }
 
+func (a Authenticator) HandlerLogout(ctx echo.Context) error {
+	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			ErrHandleRequest.Error(),
+		})
+	}
+	rawSessionID := session.Values[sessionIDCookieKey]
+
+	delete(session.Values, sessionIDCookieKey)
+
+	sessionID, ok := rawSessionID.(string)
+	if !ok {
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrRequestInfo.Error(),
+		})
+	}
+	a.tokens.RefreshTokens.Delete(sessionID)
+	a.tokens.AccessTokens.Delete(sessionID)
+
+	err = session.Save(ctx.Request(), ctx.Response().Writer)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			ErrHandleRequest.Error(),
+		})
+	}
+	return ctx.NoContent(http.StatusOK)
+}
+
 func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 	const basicAuth = "Basic "
 
@@ -127,7 +156,8 @@ func (a Authenticator) issueTokens(ctx echo.Context, dto user.UserDTO) error {
 	}
 
 	refreshToken := token.IssueRefreshToken(128)
-	a.tokens.RefreshTokens.Set(refreshToken, id, 0)
+	a.tokens.AccessTokens.Set(id, accessToken, 0)
+	a.tokens.RefreshTokens.Set(id, refreshToken, 0)
 
 	return ctx.JSON(http.StatusOK, tokens{
 		AccessToken:  accessToken,
