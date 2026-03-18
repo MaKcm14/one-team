@@ -8,10 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth/token"
-	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
+
+	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth/token"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 type httpError struct {
@@ -92,8 +93,7 @@ func (a Authenticator) issueTokens(ctx echo.Context) error {
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(token.AccessTokenTTL)),
 		},
-		SessionID: "", // TODO: add the session's storage and set a new sessionID for it with the TTL as at the AT.
-		UserData:  user.Claims{
+		UserData: user.Claims{
 			// TODO: add here some claims
 		},
 	})
@@ -103,8 +103,33 @@ func (a Authenticator) issueTokens(ctx echo.Context) error {
 		})
 	}
 
+	id, err := a.createSession()
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
+		})
+	}
+
+	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
+		})
+	}
+	session.Values[sessionIDCookieKey] = id
+
+	err = a.session.Writer.Save(ctx.Request(), ctx.Response().Writer, session)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
+		})
+	}
+
+	refreshToken := token.IssueRefreshToken(128)
+	a.tokens.RefreshTokens.Set(refreshToken, id, 0)
+
 	return ctx.JSON(http.StatusOK, tokens{
 		AccessToken:  accessToken,
-		RefreshToken: "", // TODO: issue the refresh-token too.
+		RefreshToken: refreshToken,
 	})
 }

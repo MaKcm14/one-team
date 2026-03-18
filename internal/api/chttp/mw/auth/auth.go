@@ -17,6 +17,8 @@ type errorResponse struct {
 
 type Authenticator struct {
 	acToken     token.AccessToken
+	tokens      token.TokenStorage
+	session     SessionConfig
 	authService user.IAuthService
 }
 
@@ -27,6 +29,7 @@ func NewMW(
 	return Authenticator{
 		acToken:     token.NewAccessToken(cfg),
 		authService: authService,
+		tokens:      token.NewTokenStorage(),
 	}
 }
 
