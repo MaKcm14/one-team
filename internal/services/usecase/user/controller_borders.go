@@ -5,5 +5,5 @@ import (
 )
 
 type IAuthService interface {
-	Login(ctx context.Context, creds Credentials) error
+	Login(ctx context.Context, creds Credentials) (UserDTO, error)
 }

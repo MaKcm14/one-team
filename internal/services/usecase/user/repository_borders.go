@@ -8,4 +8,5 @@ import (
 
 type IAuthRepo interface {
 	GetUser(ctx context.Context, login string) (entity.User, error)
+	GetUserRole(ctx context.Context, login string) (entity.Role, error)
 }

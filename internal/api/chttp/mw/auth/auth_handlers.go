@@ -29,9 +29,9 @@ func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 8*time.Second)
 	defer cancel()
 
-	err := a.authService.Login(ctx, creds)
+	dto, err := a.authService.Login(ctx, creds)
 	if err != nil {
-		if errors.Is(err, user.ErrUserNotFound) || errors.Is(err, user.ErrWrongPassword) {
+		if errors.Is(err, user.ErrUserNotFound) || errors.Is(err, user.ErrWrongPassword) || errors.Is(err, user.ErrRoleNotAssign) {
 			return eCtx.JSON(http.StatusUnauthorized, errorResponse{
 				Error: ErrInvalidAuthInfo.Error(),
 			})
@@ -40,7 +40,7 @@ func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 			Error: ErrHandleRequest.Error(),
 		})
 	}
-	return a.issueTokens(eCtx)
+	return a.issueTokens(eCtx, dto)
 }
 
 func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
@@ -81,7 +81,7 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 	}, nil
 }
 
-func (a Authenticator) issueTokens(ctx echo.Context) error {
+func (a Authenticator) issueTokens(ctx echo.Context, dto user.UserDTO) error {
 	type tokens struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
@@ -94,7 +94,8 @@ func (a Authenticator) issueTokens(ctx echo.Context) error {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(token.AccessTokenTTL)),
 		},
 		UserData: user.Claims{
-			// TODO: add here some claims
+			Login: dto.User.Login,
+			Role:  dto.Role,
 		},
 	})
 	if err != nil {

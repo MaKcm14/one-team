@@ -29,18 +29,31 @@ func NewInteractor(
 	}
 }
 
-func (auth Interactor) Login(ctx context.Context, creds user.Credentials) error {
+func (auth Interactor) Login(ctx context.Context, creds user.Credentials) (user.UserDTO, error) {
 	userInfo, err := auth.authRepo.GetUser(ctx, creds.Login)
 	if err != nil {
+		retErr := fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
 		if errors.Is(err, persistent.ErrUserNotFound) {
-			return user.ErrUserNotFound
+			retErr = user.ErrUserNotFound
 		}
-		return fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
+		return user.UserDTO{}, retErr
 	}
 
 	err = auth.checkPassword(userInfo.HashPWD, creds.Password+fmt.Sprint(userInfo.Salt+auth.cfg.GlobalSalt))
 	if err != nil {
-		return user.ErrWrongPassword
+		return user.UserDTO{}, user.ErrWrongPassword
 	}
-	return nil
+
+	role, err := auth.authRepo.GetUserRole(ctx, creds.Login)
+	if err != nil {
+		retErr := fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
+		if errors.Is(err, persistent.ErrRoleNotAssign) {
+			retErr = user.ErrRoleNotAssign
+		}
+		return user.UserDTO{}, retErr
+	}
+	return user.UserDTO{
+		User: userInfo,
+		Role: role,
+	}, nil
 }
