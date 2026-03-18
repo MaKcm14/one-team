@@ -9,11 +9,15 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth/token"
+	entity "github.com/MaKcm14/one-team/internal/entity/user"
 )
 
 const sessionIDCookieKey = "session_id"
 
-type UserSession struct{}
+type UserSession struct {
+	User entity.User
+	Role entity.Role
+}
 
 type SessionConfig struct {
 	Sessions *cache.Cache

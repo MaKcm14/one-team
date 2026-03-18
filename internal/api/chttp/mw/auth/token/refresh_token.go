@@ -4,9 +4,22 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/MaKcm14/one-team/internal/config"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const RefreshTokenTTL = 24 * time.Hour
+
+type RefreshToken struct {
+	cfg config.AuthConfig
+}
+
+func NewRefreshToken(cfg config.AuthConfig) RefreshToken {
+	return RefreshToken{
+		cfg: cfg,
+	}
+}
 
 func genOpaqueToken(size int) string {
 	blockSize := size / 12
@@ -34,6 +47,14 @@ func genRandSlice(slice []byte) {
 	}
 }
 
-func IssueRefreshToken(size int) string {
+func (r RefreshToken) IssueRefreshToken(size int) string {
 	return genOpaqueToken(size)
+}
+
+func (r RefreshToken) CheckRefreshToken(origHashedToken string, token string) error {
+	return bcrypt.CompareHashAndPassword([]byte(origHashedToken), []byte(token))
+}
+
+func (r RefreshToken) HashRefreshToken(token string) ([]byte, error) {
+	return bcrypt.GenerateFromPassword([]byte(token), r.cfg.TokenSalt)
 }

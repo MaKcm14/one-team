@@ -43,6 +43,9 @@ func (c Controller) configEndpoints() {
 	c.e.Use(
 		mw.Recovery(c.log),
 		mw.LoggerMW(c.log),
-		c.authMW.VerifyAccessTokenMW(),
 	)
+
+	c.e.POST("/login", c.authMW.HandlerLogin)
+	c.e.POST("/logout", c.authMW.HandlerLogout)
+	c.e.POST("/refresh", c.authMW.HandlerRefresh)
 }

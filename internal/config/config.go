@@ -13,8 +13,9 @@ type DBConfig struct {
 }
 
 type AuthConfig struct {
-	Secret     string `yaml:"secret" env-required:"true"`
-	GlobalSalt int    `yaml:"salt" env-required:"true"`
+	Secret        string `yaml:"secret" env-required:"true"`
+	GlobalPwdSalt int    `yaml:"pwd_salt" env-required:"true"`
+	TokenSalt     int    `yaml:"token_salt" env-required:"true"`
 }
 
 type ControllerConfig struct {

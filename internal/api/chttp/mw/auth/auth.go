@@ -18,6 +18,7 @@ type errorResponse struct {
 
 type Authenticator struct {
 	acToken     token.AccessToken
+	refToken    token.RefreshToken
 	tokens      token.TokenStorage
 	session     SessionConfig
 	authService user.IAuthService

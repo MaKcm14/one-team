@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth/token"
@@ -62,6 +63,7 @@ func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 	}
 	a.tokens.RefreshTokens.Delete(sessionID)
 	a.tokens.AccessTokens.Delete(sessionID)
+	a.session.Sessions.Delete(sessionID)
 
 	err = session.Save(ctx.Request(), ctx.Response().Writer)
 	if err != nil {
@@ -70,6 +72,77 @@ func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 		})
 	}
 	return ctx.NoContent(http.StatusOK)
+}
+
+func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
+	type tokensRequest struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	tokens := tokensRequest{}
+	if err := ctx.Bind(&tokens); err != nil {
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrRequestInfo.Error(),
+		})
+	}
+
+	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+	if err != nil {
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
+		})
+	}
+	rawSessionID := session.Values[sessionIDCookieKey]
+
+	sessionID, ok := rawSessionID.(string)
+	if !ok {
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			ErrRequestInfo.Error(),
+		})
+	}
+
+	val, ok := a.tokens.RefreshTokens.Get(sessionID)
+	if !ok {
+		return ctx.JSON(http.StatusUnauthorized, errorResponse{
+			Error: ErrTokenNotValid.Error(),
+		})
+	}
+
+	hashRefreshToken, ok := val.(string)
+	if !ok {
+		return ctx.JSON(http.StatusUnauthorized, errorResponse{
+			Error: ErrTokenNotValid.Error(),
+		})
+	}
+
+	err = a.refToken.CheckRefreshToken(hashRefreshToken, tokens.RefreshToken)
+	if err != nil {
+		return ctx.JSON(http.StatusUnauthorized, errorResponse{
+			Error: ErrTokenNotValid.Error(),
+		})
+	}
+
+	a.tokens.AccessTokens.Delete(sessionID)
+	a.tokens.RefreshTokens.Delete(sessionID)
+
+	rawUserSession, ok := a.session.Sessions.Get(sessionID)
+	if !ok {
+		return ctx.JSON(http.StatusUnauthorized, errorResponse{
+			Error: ErrLoginRequired.Error(),
+		})
+	}
+
+	userSession, ok := rawUserSession.(UserSession)
+	if !ok {
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
+		})
+	}
+	return a.issueTokens(ctx, user.UserDTO{
+		User: userSession.User,
+		Role: userSession.Role,
+	})
 }
 
 func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
@@ -116,11 +189,14 @@ func (a Authenticator) issueTokens(ctx echo.Context, dto user.UserDTO) error {
 		RefreshToken string `json:"refresh_token"`
 	}
 
+	accessTokenID, _ := uuid.NewRandom()
+
 	accessToken, err := a.acToken.IssueAccessToken(token.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    token.IssuerName,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(token.AccessTokenTTL)),
+			ID:        accessTokenID.String(),
 		},
 		UserData: user.Claims{
 			Login: dto.User.Login,
@@ -155,9 +231,15 @@ func (a Authenticator) issueTokens(ctx echo.Context, dto user.UserDTO) error {
 		})
 	}
 
-	refreshToken := token.IssueRefreshToken(128)
-	a.tokens.AccessTokens.Set(id, accessToken, 0)
-	a.tokens.RefreshTokens.Set(id, refreshToken, 0)
+	refreshToken := a.refToken.IssueRefreshToken(128)
+	refreshTokenHash, _ := a.refToken.HashRefreshToken(refreshToken)
+
+	a.tokens.AccessTokens.Set(id, accessTokenID, 0)
+	a.tokens.RefreshTokens.Set(id, refreshTokenHash, 0)
+	a.session.Sessions.Set(id, UserSession{
+		User: dto.User,
+		Role: dto.Role,
+	}, 0)
 
 	return ctx.JSON(http.StatusOK, tokens{
 		AccessToken:  accessToken,
