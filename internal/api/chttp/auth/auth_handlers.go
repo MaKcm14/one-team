@@ -69,17 +69,15 @@ func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 			ErrHandleRequest.Error(),
 		})
 	}
-	rawSessionID := session.Values[sessionIDCookieKey]
 
-	delete(session.Values, sessionIDCookieKey)
-
-	sessionID, ok := rawSessionID.(string)
-	if !ok {
-		a.log.Error(fmt.Sprintf("Error of session format in cookie was got while logout: can't extract and convert it: %s", err))
+	sessionID, err := ExtractSessionIDFromCtx(ctx)
+	if err != nil {
+		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
 		return ctx.JSON(http.StatusBadRequest, errorResponse{
 			ErrRequestInfo.Error(),
 		})
 	}
+	delete(session.Values, sessionIDCookieKey)
 
 	a.tokens.AccessTokens.Delete(sessionID)
 	a.tokens.RefreshTokens.Delete(sessionID)
@@ -109,42 +107,25 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 		})
 	}
 
-	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+	sessionID, err := ExtractSessionIDFromCtx(ctx)
 	if err != nil {
-		a.log.Warn(fmt.Sprintf("Warn of getting the session from the current request: %s", err))
-		return ctx.JSON(http.StatusBadRequest, errorResponse{
-			Error: ErrRequestInfo.Error(),
-		})
-	}
-	rawSessionID := session.Values[sessionIDCookieKey]
-
-	sessionID, ok := rawSessionID.(string)
-	if !ok {
-		a.log.Warn(fmt.Sprintf("Warn of formatting the session from the current request: %s", err))
+		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
 		return ctx.JSON(http.StatusBadRequest, errorResponse{
 			ErrRequestInfo.Error(),
 		})
 	}
 
-	val, ok := a.tokens.RefreshTokens.Get(sessionID)
-	if !ok {
-		a.log.Warn(fmt.Sprintf("Warn of refresh-token: it's not in the cache: has expired or wrong: %s", err))
+	hashRefreshToken, err := a.tokens.GetHashRefreshToken(sessionID)
+	if err != nil {
+		a.log.Warn(fmt.Sprintf("Warn of refresh-token storage: %s", err))
 		return ctx.JSON(http.StatusUnauthorized, errorResponse{
 			Error: ErrRefreshTokenNotValid.Error(),
 		})
 	}
 
-	hashRefreshToken, ok := val.(string)
-	if !ok {
-		a.log.Error(fmt.Sprintf("Error of refresh-token: it has the wrong format"))
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
-		})
-	}
-
 	err = a.refToken.CheckRefreshToken(hashRefreshToken, tokens.RefreshToken)
 	if err != nil {
-		a.log.Warn(fmt.Sprintf("Error of refresh-token: it's not valid: %s", err))
+		a.log.Warn(fmt.Sprintf("Warn of refresh-token: it's not valid: %s", err))
 		return ctx.JSON(http.StatusUnauthorized, errorResponse{
 			Error: ErrRefreshTokenNotValid.Error(),
 		})
@@ -152,19 +133,11 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 
 	a.tokens.RefreshTokens.Delete(sessionID)
 
-	rawUserSession, ok := a.session.Sessions.Get(sessionID)
-	if !ok {
-		a.log.Warn(fmt.Sprintf("Warn of getting the session: has expired or wrong"))
-		return ctx.JSON(http.StatusUnauthorized, errorResponse{
-			Error: ErrLoginRequired.Error(),
-		})
-	}
-
-	userSession, ok := rawUserSession.(user.UserSession)
-	if !ok {
-		a.log.Error("Error of the session format: it's wrong and can't be parsed")
+	userSession, err := a.session.GetSession(sessionID)
+	if err != nil {
+		a.log.Warn(fmt.Sprintf("Warn of getting the session: %s", err))
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+			ErrHandleRequest.Error(),
 		})
 	}
 	return a.issueTokens(ctx, sessionID, userSession)

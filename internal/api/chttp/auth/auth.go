@@ -55,20 +55,11 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 				})
 			}
 
-			session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+			sessionID, err := ExtractSessionIDFromCtx(ctx)
 			if err != nil {
-				a.log.Error(fmt.Sprintf("Error of getting the session from request: %s", err))
+				a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
 				return ctx.JSON(http.StatusBadRequest, errorResponse{
-					Error: ErrRequestInfo.Error(),
-				})
-			}
-			rawSessionID := session.Values[sessionIDCookieKey]
-
-			sessionID, ok := rawSessionID.(string)
-			if !ok {
-				a.log.Error(fmt.Sprintf("Error of getting and converting the session from the given format: %s", err))
-				return ctx.JSON(http.StatusBadRequest, errorResponse{
-					Error: ErrRequestInfo.Error(),
+					ErrRequestInfo.Error(),
 				})
 			}
 
@@ -89,6 +80,22 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 
 			ctx.Set(TokenClaimsCtxKey, claims)
 
+			return next(ctx)
+		}
+	}
+}
+
+func (a Authenticator) ExtractSessionMW() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(ctx echo.Context) error {
+			session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+			if err == nil {
+				rawSessionID := session.Values[sessionIDCookieKey]
+				sessionID, ok := rawSessionID.(string)
+				if ok {
+					ctx.Set(SessionIDCtxKey, sessionID)
+				}
+			}
 			return next(ctx)
 		}
 	}

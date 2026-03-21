@@ -49,6 +49,7 @@ func (c Controller) configEndpoints() {
 	c.e.Use(
 		mw.Recovery(c.log),
 		mw.LoggerMW(c.log),
+		c.authMW.ExtractSessionMW(),
 		c.authMW.DebugPrintCaches(),
 	)
 

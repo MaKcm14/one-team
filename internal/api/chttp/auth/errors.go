@@ -14,4 +14,8 @@ var (
 	ErrAccessTokenNotValid  = errors.New("error of access-token: is not valid")
 	ErrRefreshTokenNotValid = errors.New("error of refresh-token: is not valid")
 	ErrWrongAuthInfo        = errors.New("error of the authorization info: it's not full or wrong")
+
+	// Session's storage.
+	ErrSessionNotFound    = errors.New("auth: error of searching the session: not found")
+	ErrSessionWrongFormat = errors.New("auth: error of session: wrong format")
 )
