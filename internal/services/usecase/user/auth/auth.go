@@ -90,5 +90,5 @@ func (auth Interactor) SignUp(ctx context.Context, dto user.UserSignUpDTO) error
 	} else if err != nil {
 		return fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
 	}
-	return fmt.Errorf("%w: user is already exists", user.ErrSignUp)
+	return fmt.Errorf("%w: %w", user.ErrSignUp, user.ErrUserAlreadyExists)
 }

@@ -8,6 +8,6 @@ type UserDTO struct {
 }
 
 type UserSignUpDTO struct {
-	Creds Credentials
-	Role  entity.Role
+	Creds Credentials `json:"credentials"`
+	Role  entity.Role `json:"role_name"`
 }

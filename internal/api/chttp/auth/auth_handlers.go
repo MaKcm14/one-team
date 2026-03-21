@@ -145,9 +145,45 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 	})
 }
 
-func (a Authenticator) HandlerSignUp(ctx echo.Context) error {
-	// TODO: update it.
-	return nil
+func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
+	dto := user.UserSignUpDTO{}
+	if err := eCtx.Bind(&dto); err != nil {
+		return eCtx.JSON(http.StatusBadRequest, errorResponse{
+			Error: ErrRequestInfo.Error(),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 8*time.Second)
+	defer cancel()
+
+	err := a.authService.SignUp(ctx, dto)
+	if err != nil {
+		if errors.Is(err, user.ErrSignUp) {
+			if errors.Is(err, user.ErrUserAlreadyExists) {
+				return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+					Error: ErrSignUpUserExists.Error(),
+				})
+			} else if errors.Is(err, user.ErrVerifyPassword) {
+				if errors.Is(err, user.ErrPasswordLength) {
+					return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+						Error: "password length must be at least 9 symbols",
+					})
+				} else if errors.Is(err, user.ErrPasswordSymbols) {
+					return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+						Error: "password must contain at least 2 symbols from the list '@, #, _, !, $, ?'",
+					})
+				}
+			} else if errors.Is(err, user.ErrRoleNotFound) {
+				return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+					Error: "the set user's role doesn't exist",
+				})
+			}
+		}
+		return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.NoContent(http.StatusCreated)
 }
 
 func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
