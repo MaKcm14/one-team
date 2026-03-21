@@ -7,6 +7,7 @@ import (
 	"log/slog"
 
 	"github.com/MaKcm14/one-team/internal/config"
+	entity "github.com/MaKcm14/one-team/internal/entity/user"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
@@ -56,4 +57,38 @@ func (auth Interactor) Login(ctx context.Context, creds user.Credentials) (user.
 		User: userInfo,
 		Role: role,
 	}, nil
+}
+
+func (auth Interactor) SignUp(ctx context.Context, dto user.UserSignUpDTO) error {
+	_, err := auth.authRepo.GetUser(ctx, dto.Creds.Login)
+	if errors.Is(err, persistent.ErrUserNotFound) {
+		if err := auth.verifyPassword(dto.Creds.Password); err != nil {
+			return fmt.Errorf("%w: %w", user.ErrSignUp, err)
+		}
+
+		userSalt := auth.generateSalt()
+		hashPwd, err := auth.hashPassword(dto.Creds.Password, userSalt)
+		if err != nil {
+			return fmt.Errorf("%w: %s", user.ErrHashPassword, err)
+		}
+
+		err = auth.authRepo.CreateUser(ctx, user.UserDTO{
+			User: entity.User{
+				Login:   dto.Creds.Login,
+				HashPWD: string(hashPwd),
+			},
+			Role: dto.Role,
+		})
+		if err != nil {
+			if errors.Is(err, persistent.ErrRoleNotFound) {
+				return fmt.Errorf("%w: %w: %s", user.ErrSignUp, user.ErrRoleNotFound, err)
+			}
+			return fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
+		}
+		return nil
+
+	} else if err != nil {
+		return fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
+	}
+	return fmt.Errorf("%w: user is already exists", user.ErrSignUp)
 }

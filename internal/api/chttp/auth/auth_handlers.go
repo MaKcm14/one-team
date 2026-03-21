@@ -145,6 +145,11 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 	})
 }
 
+func (a Authenticator) HandlerSignUp(ctx echo.Context) error {
+	// TODO: update it.
+	return nil
+}
+
 func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 	const basicAuth = "Basic "
 

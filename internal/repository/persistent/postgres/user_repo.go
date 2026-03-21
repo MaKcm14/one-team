@@ -6,6 +6,7 @@ import (
 
 	entity "github.com/MaKcm14/one-team/internal/entity/user"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 type userRepo struct {
@@ -40,6 +41,48 @@ func (u userRepo) GetUser(ctx context.Context, login string) (entity.User, error
 	return user, nil
 }
 
+const getRoleIDByNameQuery = `
+SELECT id
+FROM app_realm.roles
+WHERE name=$1;
+`
+
+func (u userRepo) getRoleIDByName(ctx context.Context, name entity.Role) (int, error) {
+	res, err := u.client.conn.Query(ctx, getRoleIDByNameQuery, name)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return 0, persistent.ErrRoleNotFound
+	}
+
+	var id int
+	if err := res.Scan(&id); err != nil {
+		return 0, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	return id, nil
+}
+
+const createUserQuery = `
+INSERT INTO app_realm.users (login, hash_pwd, salt, role_id)
+VALUES ($1, $2, $3, $4);
+`
+
+func (u userRepo) CreateUser(ctx context.Context, dto user.UserDTO) error {
+	id, err := u.getRoleIDByName(ctx, dto.Role)
+	if err != nil {
+		return err
+	}
+
+	_, err = u.client.conn.Exec(ctx, createUserQuery, dto.User.Login, dto.User.HashPWD, dto.User.Salt, id)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	return nil
+}
+
 const getUserRoleQuery = `
 SELECT app_realm.roles.name
 FROM app_realm.users
@@ -59,7 +102,7 @@ func (u userRepo) GetUserRole(ctx context.Context, login string) (entity.Role, e
 	if res.Next() {
 		var role entity.Role
 		if err := res.Scan(&role); err != nil {
-			return "", fmt.Errorf("%w: %s", persistent.ErrQueryExec)
+			return "", fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 		}
 		return role, nil
 	}
