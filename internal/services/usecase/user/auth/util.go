@@ -19,13 +19,19 @@ func (auth Interactor) checkPassword(origHashPwd string, password string) error 
 
 func (auth Interactor) hashPassword(pwd string, userSalt int) ([]byte, error) {
 	return bcrypt.GenerateFromPassword(
-		[]byte(fmt.Sprintf("%s%d", pwd, auth.cfg.GlobalPwdSalt)),
+		[]byte(
+			fmt.Sprintf("%s%d", pwd, auth.cfg.GlobalPwdSalt),
+		),
 		userSalt,
 	)
 }
 
 func (auth Interactor) generateSalt() int {
-	return rand.Intn(auth.cfg.GlobalPwdSalt)
+	salt := 0
+	for salt < 4 {
+		salt = rand.Intn(31)
+	}
+	return salt
 }
 
 func (auth Interactor) verifyPassword(pwd string) error {

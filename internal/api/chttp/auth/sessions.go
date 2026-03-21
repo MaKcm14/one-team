@@ -4,30 +4,25 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"github.com/patrickmn/go-cache"
 
 	"github.com/MaKcm14/one-team/internal/api/chttp/auth/token"
-	entity "github.com/MaKcm14/one-team/internal/entity/user"
+	"github.com/MaKcm14/one-team/internal/config"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 const sessionIDCookieKey = "session_id"
-
-type UserSession struct {
-	User entity.User
-	Role entity.Role
-}
 
 type SessionConfig struct {
 	Sessions *cache.Cache
 	Writer   sessions.CookieStore
 }
 
-func NewSessionConfig() SessionConfig {
+func NewSessionConfig(cfg config.AuthConfig) SessionConfig {
 	return SessionConfig{
 		Sessions: cache.New(24*time.Hour, time.Hour),
-		Writer:   *sessions.NewCookieStore(securecookie.GenerateRandomKey(32)),
+		Writer:   *sessions.NewCookieStore([]byte(cfg.SessionKey)),
 	}
 }
 
@@ -36,6 +31,6 @@ func (a Authenticator) createSession() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	a.session.Sessions.Set(id.String(), UserSession{}, token.AccessTokenTTL)
+	a.session.Sessions.Set(id.String(), user.UserSession{}, token.AccessTokenTTL)
 	return id.String(), nil
 }

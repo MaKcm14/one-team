@@ -60,7 +60,7 @@ func (a AccessToken) VerifyAccessToken(accessToken string) (Claims, error) {
 func (a AccessToken) IssueAccessToken(claims Claims) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	signedToken, err := token.SignedString(a.cfg.Secret)
+	signedToken, err := token.SignedString([]byte(a.cfg.Secret))
 	if err != nil {
 		return "", fmt.Errorf("%w: %s", ErrTokenIssue, err)
 	}

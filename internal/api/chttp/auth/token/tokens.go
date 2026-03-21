@@ -16,7 +16,7 @@ type TokenStorage struct {
 
 func NewTokenStorage() TokenStorage {
 	return TokenStorage{
-		AccessTokens:  cache.New(AccessTokenTTL, 5*time.Minute),
+		AccessTokens:  cache.New(AccessTokenTTL, 30*time.Minute),
 		RefreshTokens: cache.New(RefreshTokenTTL, 30*time.Minute),
 	}
 }

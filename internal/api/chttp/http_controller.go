@@ -30,7 +30,7 @@ func New(
 		e:      echo.New(),
 		log:    log,
 		cfg:    cfg,
-		authMW: auth.NewMW(cfg.AuthCfg, authService),
+		authMW: auth.NewMW(log, cfg.AuthCfg, authService),
 	}
 }
 
@@ -49,6 +49,7 @@ func (c Controller) configEndpoints() {
 	c.e.Use(
 		mw.Recovery(c.log),
 		mw.LoggerMW(c.log),
+		c.authMW.DebugPrintCaches(),
 	)
 
 	adminGroup := c.e.Group("/admin") //c.authMW.VerifyAccessTokenMW())

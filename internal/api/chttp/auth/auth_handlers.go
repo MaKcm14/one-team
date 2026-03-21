@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ type httpError struct {
 func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 	creds, httpErr := parseRequestForCreds(eCtx)
 	if httpErr != nil {
+		a.log.Warn(fmt.Sprintf("Warn of parsing the creds"))
 		return eCtx.JSON(httpErr.code, httpErr.resp)
 	}
 
@@ -33,20 +35,36 @@ func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 	dto, err := a.authService.Login(ctx, creds)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) || errors.Is(err, user.ErrWrongPassword) || errors.Is(err, user.ErrRoleNotAssign) {
+			a.log.Error(fmt.Sprintf("Error of authentication: %s", err))
 			return eCtx.JSON(http.StatusUnauthorized, errorResponse{
 				Error: ErrInvalidAuthInfo.Error(),
 			})
 		}
+		a.log.Error(fmt.Sprintf("Error of app-module: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, errorResponse{
 			Error: ErrHandleRequest.Error(),
 		})
 	}
-	return a.issueTokens(eCtx, dto)
+
+	sid, err := a.createSession()
+	if err != nil {
+		a.log.Error(fmt.Sprintf("Error of creating the session: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
+		})
+	}
+	return a.issueTokens(eCtx, sid, user.UserSession{
+		UserClaims: user.Claims{
+			Login: dto.User.Login,
+			Role:  dto.Role,
+		},
+	})
 }
 
 func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
 	if err != nil {
+		a.log.Error(fmt.Sprintf("Error of getting the session while logout: %s", err))
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
 			ErrHandleRequest.Error(),
 		})
@@ -57,16 +75,19 @@ func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 
 	sessionID, ok := rawSessionID.(string)
 	if !ok {
+		a.log.Error(fmt.Sprintf("Error of session format in cookie was got while logout: can't extract and convert it: %s", err))
 		return ctx.JSON(http.StatusBadRequest, errorResponse{
 			ErrRequestInfo.Error(),
 		})
 	}
-	a.tokens.RefreshTokens.Delete(sessionID)
+
 	a.tokens.AccessTokens.Delete(sessionID)
+	a.tokens.RefreshTokens.Delete(sessionID)
 	a.session.Sessions.Delete(sessionID)
 
 	err = session.Save(ctx.Request(), ctx.Response().Writer)
 	if err != nil {
+		a.log.Error(fmt.Sprintf("Error of saving no-session in cookie while logout: %s", err))
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
 			ErrHandleRequest.Error(),
 		})
@@ -82,6 +103,7 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 
 	tokens := tokensRequest{}
 	if err := ctx.Bind(&tokens); err != nil {
+		a.log.Error(fmt.Sprintf("Error of binding the body-request at refresh-operation: %s", err))
 		return ctx.JSON(http.StatusBadRequest, errorResponse{
 			ErrRequestInfo.Error(),
 		})
@@ -89,14 +111,16 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 
 	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+		a.log.Warn(fmt.Sprintf("Warn of getting the session from the current request: %s", err))
+		return ctx.JSON(http.StatusBadRequest, errorResponse{
+			Error: ErrRequestInfo.Error(),
 		})
 	}
 	rawSessionID := session.Values[sessionIDCookieKey]
 
 	sessionID, ok := rawSessionID.(string)
 	if !ok {
+		a.log.Warn(fmt.Sprintf("Warn of formatting the session from the current request: %s", err))
 		return ctx.JSON(http.StatusBadRequest, errorResponse{
 			ErrRequestInfo.Error(),
 		})
@@ -104,50 +128,54 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 
 	val, ok := a.tokens.RefreshTokens.Get(sessionID)
 	if !ok {
+		a.log.Warn(fmt.Sprintf("Warn of refresh-token: it's not in the cache: has expired or wrong: %s", err))
 		return ctx.JSON(http.StatusUnauthorized, errorResponse{
-			Error: ErrTokenNotValid.Error(),
+			Error: ErrRefreshTokenNotValid.Error(),
 		})
 	}
 
 	hashRefreshToken, ok := val.(string)
 	if !ok {
-		return ctx.JSON(http.StatusUnauthorized, errorResponse{
-			Error: ErrTokenNotValid.Error(),
+		a.log.Error(fmt.Sprintf("Error of refresh-token: it has the wrong format"))
+		return ctx.JSON(http.StatusInternalServerError, errorResponse{
+			Error: ErrHandleRequest.Error(),
 		})
 	}
 
 	err = a.refToken.CheckRefreshToken(hashRefreshToken, tokens.RefreshToken)
 	if err != nil {
+		a.log.Warn(fmt.Sprintf("Error of refresh-token: it's not valid: %s", err))
 		return ctx.JSON(http.StatusUnauthorized, errorResponse{
-			Error: ErrTokenNotValid.Error(),
+			Error: ErrRefreshTokenNotValid.Error(),
 		})
 	}
 
-	a.tokens.AccessTokens.Delete(sessionID)
 	a.tokens.RefreshTokens.Delete(sessionID)
 
 	rawUserSession, ok := a.session.Sessions.Get(sessionID)
 	if !ok {
+		a.log.Warn(fmt.Sprintf("Warn of getting the session: has expired or wrong"))
 		return ctx.JSON(http.StatusUnauthorized, errorResponse{
 			Error: ErrLoginRequired.Error(),
 		})
 	}
 
-	userSession, ok := rawUserSession.(UserSession)
+	userSession, ok := rawUserSession.(user.UserSession)
 	if !ok {
+		a.log.Error("Error of the session format: it's wrong and can't be parsed")
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
 			Error: ErrHandleRequest.Error(),
 		})
 	}
-	return a.issueTokens(ctx, user.UserDTO{
-		User: userSession.User,
-		Role: userSession.Role,
-	})
+	return a.issueTokens(ctx, sessionID, userSession)
 }
 
 func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 	dto := user.UserSignUpDTO{}
 	if err := eCtx.Bind(&dto); err != nil {
+		a.log.Error(
+			fmt.Sprintf("Error of sign-up: %s", err),
+		)
 		return eCtx.JSON(http.StatusBadRequest, errorResponse{
 			Error: ErrRequestInfo.Error(),
 		})
@@ -159,6 +187,7 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 	err := a.authService.SignUp(ctx, dto)
 	if err != nil {
 		if errors.Is(err, user.ErrSignUp) {
+			a.log.Warn(fmt.Sprintf("Warn of sign-up: %s", err))
 			if errors.Is(err, user.ErrUserAlreadyExists) {
 				return eCtx.JSON(http.StatusInternalServerError, errorResponse{
 					Error: ErrSignUpUserExists.Error(),
@@ -179,6 +208,7 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 				})
 			}
 		}
+		a.log.Error(fmt.Sprintf("Error of sign-up: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, errorResponse{
 			Error: ErrHandleRequest.Error(),
 		})
@@ -224,14 +254,14 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 	}, nil
 }
 
-func (a Authenticator) issueTokens(ctx echo.Context, dto user.UserDTO) error {
+// issuTokens defines the logic of issuing the tokens for the given session.
+func (a Authenticator) issueTokens(ctx echo.Context, sid string, userSession user.UserSession) error {
 	type tokens struct {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
 
 	accessTokenID, _ := uuid.NewRandom()
-
 	accessToken, err := a.acToken.IssueAccessToken(token.Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    token.IssuerName,
@@ -239,19 +269,11 @@ func (a Authenticator) issueTokens(ctx echo.Context, dto user.UserDTO) error {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(token.AccessTokenTTL)),
 			ID:        accessTokenID.String(),
 		},
-		UserData: user.Claims{
-			Login: dto.User.Login,
-			Role:  dto.Role,
-		},
+		UserData:  userSession.UserClaims,
+		SessionID: sid,
 	})
 	if err != nil {
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
-		})
-	}
-
-	id, err := a.createSession()
-	if err != nil {
+		a.log.Error(fmt.Sprintf("Error of issue the token: %s", err))
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
 			Error: ErrHandleRequest.Error(),
 		})
@@ -259,28 +281,27 @@ func (a Authenticator) issueTokens(ctx echo.Context, dto user.UserDTO) error {
 
 	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
 	if err != nil {
+		a.log.Error(fmt.Sprintf("Error of getting the session from the cookie: %s", err))
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
 			Error: ErrHandleRequest.Error(),
 		})
 	}
-	session.Values[sessionIDCookieKey] = id
+	session.Values[sessionIDCookieKey] = sid
 
 	err = a.session.Writer.Save(ctx.Request(), ctx.Response().Writer, session)
 	if err != nil {
+		a.log.Error(fmt.Sprintf("Error of saving the session in the cookie"))
 		return ctx.JSON(http.StatusInternalServerError, errorResponse{
 			Error: ErrHandleRequest.Error(),
 		})
 	}
 
-	refreshToken := a.refToken.IssueRefreshToken(128)
-	refreshTokenHash, _ := a.refToken.HashRefreshToken(refreshToken)
+	refreshToken := a.refToken.IssueRefreshToken(64)
+	refreshTokenHash, err := a.refToken.HashRefreshToken(refreshToken)
 
-	a.tokens.AccessTokens.Set(id, accessTokenID, 0)
-	a.tokens.RefreshTokens.Set(id, refreshTokenHash, 0)
-	a.session.Sessions.Set(id, UserSession{
-		User: dto.User,
-		Role: dto.Role,
-	}, 0)
+	a.tokens.AccessTokens.Set(sid, accessTokenID.String(), 0)
+	a.tokens.RefreshTokens.Set(sid, string(refreshTokenHash), 0)
+	a.session.Sessions.Set(sid, userSession, 0)
 
 	return ctx.JSON(http.StatusOK, tokens{
 		AccessToken:  accessToken,

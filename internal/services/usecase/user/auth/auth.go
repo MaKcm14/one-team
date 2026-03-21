@@ -40,7 +40,7 @@ func (auth Interactor) Login(ctx context.Context, creds user.Credentials) (user.
 		return user.UserDTO{}, retErr
 	}
 
-	err = auth.checkPassword(userInfo.HashPWD, creds.Password+fmt.Sprint(userInfo.Salt+auth.cfg.GlobalPwdSalt))
+	err = auth.checkPassword(userInfo.HashPWD, creds.Password)
 	if err != nil {
 		return user.UserDTO{}, user.ErrWrongPassword
 	}
@@ -76,6 +76,7 @@ func (auth Interactor) SignUp(ctx context.Context, dto user.UserSignUpDTO) error
 			User: entity.User{
 				Login:   dto.Creds.Login,
 				HashPWD: string(hashPwd),
+				Salt:    userSalt,
 			},
 			Role: dto.Role,
 		})

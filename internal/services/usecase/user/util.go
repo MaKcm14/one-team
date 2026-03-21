@@ -7,6 +7,10 @@ type Claims struct {
 	Role  entity.Role `json:"role"`
 }
 
+type UserSession struct {
+	UserClaims Claims
+}
+
 type Credentials struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`

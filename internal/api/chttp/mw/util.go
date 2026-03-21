@@ -41,9 +41,8 @@ func extractRequestInfo(ctx echo.Context) string {
 	b.WriteString(GetLogMsg("HEADERS", formatHeaders(ctx.Request().Header)))
 
 	val, body := formatBody(ctx.Request().Body)
-	ctx.Request().Body.Close()
-
 	if body != nil {
+		ctx.Request().Body.Close()
 		ctx.Request().Body = io.NopCloser(bytes.NewBuffer(body))
 	}
 	b.WriteString(GetLogMsg("BODY", val))
@@ -56,7 +55,8 @@ func extractResponseInfo(ctx echo.Context) string {
 
 	b.WriteString(GetLogMsg("IP", ctx.Request().RemoteAddr))
 	b.WriteString(GetLogMsg("URI", ctx.Request().RequestURI))
-	b.WriteString(GetLogMsg("STATUS", ctx.Response().Status))
+	b.WriteString(GetLogMsg("STATUS", fmt.Sprint(ctx.Response().Status)))
 	b.WriteString(GetLogMsg("HEADERS", formatHeaders(ctx.Response().Header())))
+
 	return b.String()
 }
