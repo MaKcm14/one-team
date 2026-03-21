@@ -6,12 +6,15 @@ import (
 	"github.com/MaKcm14/one-team/internal/api/chttp"
 	"github.com/MaKcm14/one-team/internal/app/logger"
 	"github.com/MaKcm14/one-team/internal/config"
+	"github.com/MaKcm14/one-team/internal/repository/persistent/postgres"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user/auth"
 )
 
 type App struct {
 	log logger.Logger
 
 	contr *chttp.Controller
+	repo  postgres.Repository
 }
 
 func New() App {
@@ -27,14 +30,25 @@ func New() App {
 		panic(err)
 	}
 
+	repo, err := postgres.NewRepository(log, cfg.DBCfg)
+	if err != nil {
+		panic(err)
+	}
+
 	return App{
-		log:   log,
-		contr: chttp.New(log.Instance(), cfg.ControllerCfg),
+		log: log,
+		contr: chttp.New(
+			log.Instance(),
+			cfg.ControllerCfg,
+			auth.NewInteractor(log, cfg.ControllerCfg.AuthCfg, repo),
+		),
+		repo: repo,
 	}
 }
 
 func (a *App) Run() {
 	defer a.log.Close()
+	defer a.repo.Close()
 	defer a.log.Info("STOP THE APP")
 
 	a.log.Info("STARTING THE APP")

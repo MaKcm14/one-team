@@ -10,6 +10,7 @@ import (
 	"github.com/MaKcm14/one-team/internal/api/chttp/auth"
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw"
 	"github.com/MaKcm14/one-team/internal/config"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 type Controller struct {
@@ -20,11 +21,16 @@ type Controller struct {
 	authMW auth.Authenticator
 }
 
-func New(log *slog.Logger, cfg config.ControllerConfig) *Controller {
+func New(
+	log *slog.Logger,
+	cfg config.ControllerConfig,
+	authService user.IAuthService,
+) *Controller {
 	return &Controller{
-		e:   echo.New(),
-		log: log,
-		cfg: cfg,
+		e:      echo.New(),
+		log:    log,
+		cfg:    cfg,
+		authMW: auth.NewMW(cfg.AuthCfg, authService),
 	}
 }
 
@@ -45,7 +51,7 @@ func (c Controller) configEndpoints() {
 		mw.LoggerMW(c.log),
 	)
 
-	adminGroup := c.e.Group("/admin", c.authMW.VerifyAccessTokenMW())
+	adminGroup := c.e.Group("/admin") //c.authMW.VerifyAccessTokenMW())
 	{
 		adminGroup.POST("/signup", c.authMW.HandlerSignUp)
 	}

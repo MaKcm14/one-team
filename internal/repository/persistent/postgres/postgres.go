@@ -1,8 +1,7 @@
 package postgres
 
 import (
-	"log/slog"
-
+	"github.com/MaKcm14/one-team/internal/app/logger"
 	"github.com/MaKcm14/one-team/internal/config"
 )
 
@@ -12,7 +11,7 @@ type Repository struct {
 	client *postgresClient
 }
 
-func NewRepository(log *slog.Logger, cfg config.DBConfig) (Repository, error) {
+func NewRepository(log logger.Logger, cfg config.DBConfig) (Repository, error) {
 	client, err := newPostgresClient(log, cfg)
 	if err != nil {
 		return Repository{}, err

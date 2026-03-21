@@ -3,21 +3,21 @@ package postgres
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/MaKcm14/one-team/internal/app/logger"
 	"github.com/MaKcm14/one-team/internal/config"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
 )
 
 type postgresClient struct {
-	log  *slog.Logger
+	log  logger.Logger
 	conn *pgxpool.Pool
 }
 
-func newPostgresClient(log *slog.Logger, cfg config.DBConfig) (*postgresClient, error) {
+func newPostgresClient(log logger.Logger, cfg config.DBConfig) (*postgresClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 

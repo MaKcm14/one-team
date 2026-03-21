@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
+	"github.com/MaKcm14/one-team/internal/app/logger"
 	"github.com/MaKcm14/one-team/internal/config"
 	entity "github.com/MaKcm14/one-team/internal/entity/user"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
@@ -13,13 +13,13 @@ import (
 )
 
 type Interactor struct {
-	log      *slog.Logger
+	log      logger.Logger
 	cfg      config.AuthConfig
 	authRepo user.IAuthRepo
 }
 
 func NewInteractor(
-	log *slog.Logger,
+	log logger.Logger,
 	cfg config.AuthConfig,
 	authRepo user.IAuthRepo,
 ) Interactor {

@@ -28,9 +28,9 @@ func New() (Logger, error) {
 }
 
 func configFileName() string {
-	hour, min, seconds := time.Now().Clock()
-	year, month, day := time.Now().Date()
-	return fmt.Sprintf("one-team-{%d-%d-%d_%d:%d:%d_UTC}.log", year, month, day, hour, min, seconds)
+	hour, min, seconds := time.Now().UTC().Clock()
+	year, month, day := time.Now().UTC().Date()
+	return fmt.Sprintf("./logs/one-team___%d-%d-%d_%d-%d-%d_UTC___.log", year, month, day, hour, min, seconds)
 }
 
 func (l Logger) Instance() *slog.Logger {
