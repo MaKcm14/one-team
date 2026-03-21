@@ -45,7 +45,19 @@ func (c Controller) configEndpoints() {
 		mw.LoggerMW(c.log),
 	)
 
-	c.e.POST("/login", c.authMW.HandlerLogin)
-	c.e.POST("/logout", c.authMW.HandlerLogout)
-	c.e.POST("/refresh", c.authMW.HandlerRefresh)
+	adminGroup := c.e.Group("/admin", c.authMW.VerifyAccessTokenMW())
+	{
+		adminGroup.POST("/signup", c.authMW.HandlerSignUp)
+	}
+
+	clientGroup := c.e.Group("/client", c.authMW.VerifyAccessTokenMW())
+	{
+		clientGroup.POST("/logout", c.authMW.HandlerLogout)
+	}
+
+	authGroup := c.e.Group("/auth")
+	{
+		authGroup.POST("/login", c.authMW.HandlerLogin)
+		authGroup.POST("/token/refresh", c.authMW.HandlerRefresh)
+	}
 }
