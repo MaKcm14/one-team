@@ -22,13 +22,13 @@ const (
 
 type SessionConfig struct {
 	Sessions *cache.Cache
-	Writer   sessions.CookieStore
+	Writer   *sessions.CookieStore
 }
 
 func NewSessionConfig(cfg config.AuthConfig) SessionConfig {
 	return SessionConfig{
 		Sessions: cache.New(24*time.Hour, time.Hour),
-		Writer:   *sessions.NewCookieStore([]byte(cfg.SessionKey)),
+		Writer:   sessions.NewCookieStore([]byte(cfg.SessionKey)),
 	}
 }
 
