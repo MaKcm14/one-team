@@ -7,8 +7,8 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/MaKcm14/one-team/internal/api"
+	"github.com/MaKcm14/one-team/internal/api/chttp/auth"
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw"
-	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth"
 	"github.com/MaKcm14/one-team/internal/config"
 )
 

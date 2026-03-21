@@ -8,7 +8,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/patrickmn/go-cache"
 
-	"github.com/MaKcm14/one-team/internal/api/chttp/mw/auth/token"
+	"github.com/MaKcm14/one-team/internal/api/chttp/auth/token"
 	entity "github.com/MaKcm14/one-team/internal/entity/user"
 )
 
