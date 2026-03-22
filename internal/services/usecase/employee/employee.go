@@ -72,8 +72,12 @@ func (e Interactor) CountEmployeesWithCitizenship(ctx context.Context) ([]Employ
 	return stats, nil
 }
 
-func (e Interactor) CountEmployeesWithSalaryBounds(ctx context.Context, bounds SalaryBounds) (int, error) {
-	count, err := e.workerRepo.CountEmployeesWithSalaryBounds(ctx, bounds)
+func (e Interactor) CountEmployeesWithSalaryBounds(
+	ctx context.Context,
+	titleID int,
+	bounds SalaryBounds,
+) (int, error) {
+	count, err := e.workerRepo.CountEmployeesWithSalaryBounds(ctx, titleID, bounds)
 	if err != nil {
 		return 0, fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}

@@ -176,13 +176,23 @@ func (e EmployeeRouter) HandlerCountEmployeesWithSalaryBoundary(eCtx echo.Contex
 		})
 	}
 
+	titleID, err := validateTitleID(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	count, err := e.workerService.CountEmployeesWithSalaryBounds(ctx, employee.SalaryBounds{
-		DownBoundary: downBound,
-		UpBoundary:   upperBound,
-	})
+	count, err := e.workerService.CountEmployeesWithSalaryBounds(
+		ctx,
+		titleID,
+		employee.SalaryBounds{
+			DownBoundary: downBound,
+			UpBoundary:   upperBound,
+		})
 	if err != nil {
 		e.log.Error(fmt.Sprintf("Error of counting the statistics: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{

@@ -13,7 +13,7 @@ type IEmployeeServiceWriter interface {
 
 type IEmployeeServiceReader interface {
 	CountEmployeesWithCitizenship(ctx context.Context) ([]EmployeeCitizenshipStatistic, error)
-	CountEmployeesWithSalaryBounds(ctx context.Context, bounds SalaryBounds) (int, error)
+	CountEmployeesWithSalaryBounds(ctx context.Context, titleID int, bounds SalaryBounds) (int, error)
 }
 
 type IEmployeeTitleReader interface {

@@ -10,6 +10,7 @@ import (
 const (
 	salaryDownBoundQueryParamKey  = "down"
 	salaryUpperBoundQueryParamKey = "up"
+	titleIDQueryParamKey          = "title_id"
 )
 
 func validateSalaryDownBound(ctx echo.Context) (int, error) {
@@ -40,4 +41,19 @@ func validateSalaryUpperBound(ctx echo.Context) (int, error) {
 		return 0, fmt.Errorf("error of '%s' query param: can't be less than 0", salaryDownBoundQueryParamKey)
 	}
 	return upperBound, nil
+}
+
+func validateTitleID(ctx echo.Context) (int, error) {
+	param := ctx.QueryParam(titleIDQueryParamKey)
+	if len(param) == 0 {
+		return 0, fmt.Errorf("error of '%s' query param value: wasn't set", titleIDQueryParamKey)
+	}
+
+	titleID, err := strconv.Atoi(param)
+	if err != nil {
+		return 0, fmt.Errorf("error of converting the '%s' query param into ID", titleIDQueryParamKey)
+	} else if titleID < 0 {
+		return 0, fmt.Errorf("error of '%s' query param: can't be less than 0", titleIDQueryParamKey)
+	}
+	return titleID, nil
 }

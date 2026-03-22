@@ -270,11 +270,12 @@ func (e employeeRepo) CountEmployeesWithCitizenship(
 const countEmployeesWithSalaryBoundsQuery = `
 SELECT COUNT(*)
 FROM usecase.employees
-WHERE salary >= $1 AND salary <= $2;
+WHERE salary >= $1 AND salary <= $2 AND title_id=$3;
 `
 
 func (e employeeRepo) CountEmployeesWithSalaryBounds(
 	ctx context.Context,
+	titleID int,
 	bounds employee.SalaryBounds,
 ) (int, error) {
 	res, err := e.client.conn.Query(
@@ -282,6 +283,7 @@ func (e employeeRepo) CountEmployeesWithSalaryBounds(
 		countEmployeesWithSalaryBoundsQuery,
 		bounds.DownBoundary,
 		bounds.UpBoundary,
+		titleID,
 	)
 	if err != nil {
 		return 0, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
