@@ -24,9 +24,10 @@ type Authenticator struct {
 	authService user.IAuthService
 }
 
-func NewMW(
+func NewAuthenticator(
 	log *slog.Logger,
 	cfg config.AuthConfig,
+	session SessionConfig,
 	authService user.IAuthService,
 ) Authenticator {
 	return Authenticator{
@@ -35,7 +36,7 @@ func NewMW(
 		refToken:    token.NewRefreshToken(cfg),
 		authService: authService,
 		tokens:      token.NewTokenStorage(),
-		session:     NewSessionConfig(cfg),
+		session:     session,
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 )
 
 type IEmployeeRepoReader interface {
-	IsEmployeeExists(ctx context.Context, workder entity.Employee) error
+	IsEmployeeExists(ctx context.Context, worker entity.Employee) error
 }
 
 type IEmployeeRepoWriter interface {
