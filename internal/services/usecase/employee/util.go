@@ -6,3 +6,8 @@ type EmployeeCitizenshipStatistic struct {
 	Citizenship   entity.Citizenship `json:"citizenship"`
 	EmployeeCount int                `json:"employee_count"`
 }
+
+type SalaryBounds struct {
+	UpBoundary   int
+	DownBoundary int
+}

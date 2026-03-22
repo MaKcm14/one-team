@@ -145,7 +145,7 @@ func (e EmployeeRouter) HandlerCountEmployeeWithCitizenship(eCtx echo.Context) e
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	stats, err := e.workerService.CountEmployeeWithCitizenships(ctx)
+	stats, err := e.workerService.CountEmployeesWithCitizenship(ctx)
 	if err != nil {
 		e.log.Error(fmt.Sprintf("Error of counting the stats: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
@@ -154,5 +154,42 @@ func (e EmployeeRouter) HandlerCountEmployeeWithCitizenship(eCtx echo.Context) e
 	}
 	return eCtx.JSON(http.StatusOK, response{
 		Statistics: stats,
+	})
+}
+
+func (e EmployeeRouter) HandlerCountEmployeesWithSalaryBoundary(eCtx echo.Context) error {
+	type response struct {
+		Count int `json:"count"`
+	}
+
+	downBound, err := validateSalaryDownBound(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	upperBound, err := validateSalaryUpperBound(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	count, err := e.workerService.CountEmployeesWithSalaryBounds(ctx, employee.SalaryBounds{
+		DownBoundary: downBound,
+		UpBoundary:   upperBound,
+	})
+	if err != nil {
+		e.log.Error(fmt.Sprintf("Error of counting the statistics: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.JSON(http.StatusOK, response{
+		Count: count,
 	})
 }

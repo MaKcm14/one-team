@@ -64,10 +64,18 @@ func (e Interactor) GetCitizenships(ctx context.Context) ([]entity.Citizenship, 
 	return citizenships, nil
 }
 
-func (e Interactor) CountEmployeeWithCitizenships(ctx context.Context) ([]EmployeeCitizenshipStatistic, error) {
-	stats, err := e.workerRepo.CountEmployeeWithCitizenships(ctx)
+func (e Interactor) CountEmployeesWithCitizenship(ctx context.Context) ([]EmployeeCitizenshipStatistic, error) {
+	stats, err := e.workerRepo.CountEmployeesWithCitizenship(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}
 	return stats, nil
+}
+
+func (e Interactor) CountEmployeesWithSalaryBounds(ctx context.Context, bounds SalaryBounds) (int, error) {
+	count, err := e.workerRepo.CountEmployeesWithSalaryBounds(ctx, bounds)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return count, nil
 }

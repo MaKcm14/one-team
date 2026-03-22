@@ -8,7 +8,8 @@ import (
 
 type IEmployeeRepoReader interface {
 	IsEmployeeExists(ctx context.Context, worker entity.Employee) error
-	CountEmployeeWithCitizenships(ctx context.Context) ([]EmployeeCitizenshipStatistic, error)
+	CountEmployeesWithCitizenship(ctx context.Context) ([]EmployeeCitizenshipStatistic, error)
+	CountEmployeesWithSalaryBounds(ctx context.Context, bounds SalaryBounds) (int, error)
 }
 
 type IEmployeeRepoWriter interface {

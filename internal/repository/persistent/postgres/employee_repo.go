@@ -232,7 +232,7 @@ func (e employeeRepo) GetCitizenships(ctx context.Context) ([]entity.Citizenship
 	return citizenships, nil
 }
 
-const countEmployeeWithCitizenships = `
+const countEmployeesWithCitizenship = `
 SELECT usecase.citizenships.id, usecase.citizenships.name, COUNT(*)
 FROM usecase.employees
 	JOIN
@@ -241,10 +241,10 @@ FROM usecase.employees
 GROUP BY usecase.citizenships.id, usecase.citizenships.name;
 `
 
-func (e employeeRepo) CountEmployeeWithCitizenships(
+func (e employeeRepo) CountEmployeesWithCitizenship(
 	ctx context.Context,
 ) ([]employee.EmployeeCitizenshipStatistic, error) {
-	res, err := e.client.conn.Query(ctx, countEmployeeWithCitizenships)
+	res, err := e.client.conn.Query(ctx, countEmployeesWithCitizenship)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 	}
@@ -265,4 +265,36 @@ func (e employeeRepo) CountEmployeeWithCitizenships(
 		stats = append(stats, employeeStat)
 	}
 	return stats, nil
+}
+
+const countEmployeesWithSalaryBoundsQuery = `
+SELECT COUNT(*)
+FROM usecase.employees
+WHERE salary >= $1 AND salary <= $2;
+`
+
+func (e employeeRepo) CountEmployeesWithSalaryBounds(
+	ctx context.Context,
+	bounds employee.SalaryBounds,
+) (int, error) {
+	res, err := e.client.conn.Query(
+		ctx,
+		countEmployeesWithSalaryBoundsQuery,
+		bounds.DownBoundary,
+		bounds.UpBoundary,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return 0, persistent.ErrQueryExec
+	}
+
+	var count int
+	if err := res.Scan(&count); err != nil {
+		return 0, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	return count, nil
 }
