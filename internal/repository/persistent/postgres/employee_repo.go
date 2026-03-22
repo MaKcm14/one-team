@@ -60,6 +60,41 @@ func (e employeeRepo) getTitleIDByName(ctx context.Context, name entity.Title) (
 	return id, nil
 }
 
+const isEmployeeExistsQuery = `
+SELECT COUNT(*)
+FROM usecase.employees
+WHERE tin_num=$1 OR snils_num=$2 OR passport_data=$3 OR phone_num=$4;
+`
+
+func (e employeeRepo) IsEmployeeExists(ctx context.Context, worker entity.Employee) error {
+	res, err := e.client.conn.Query(
+		ctx,
+		isEmployeeExistsQuery,
+		worker.TinNum,
+		worker.Snils,
+		worker.PassportData,
+		worker.PhoneNum,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if res.Next() {
+		return persistent.ErrQueryExec
+	}
+
+	var count int
+	if err := res.Scan(&count); err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if count == 0 {
+		return persistent.ErrEmployeeNotFound
+	}
+	return nil
+}
+
 const createEmployeeQuery = `
 INSERT INTO usecase.employees (tin_num, snils_num, passport_data, phone_num, first_name, last_name, patronymic, address, title_id, hiring_date, unit_id, education, salary, citizenship_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);

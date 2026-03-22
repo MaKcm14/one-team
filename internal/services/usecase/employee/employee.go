@@ -20,7 +20,14 @@ func NewInteractor(workerRepo IEmployeeRepo) Interactor {
 }
 
 func (e Interactor) CreateEmployee(ctx context.Context, employee entity.Employee) error {
-	err := e.CreateEmployee(ctx, employee)
+	err := e.workerRepo.IsEmployeeExists(ctx, employee)
+	if err == nil {
+		return ErrEmployeeExists
+	} else if !errors.Is(err, persistent.ErrEmployeeNotFound) {
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	err = e.CreateEmployee(ctx, employee)
 	if err != nil {
 		retErr := fmt.Errorf("%w: %s", ErrRepoInteract, err)
 		if errors.Is(err, persistent.ErrCitizenshipNotFound) {

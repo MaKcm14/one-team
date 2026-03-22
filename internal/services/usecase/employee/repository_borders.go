@@ -6,6 +6,10 @@ import (
 	entity "github.com/MaKcm14/one-team/internal/entity/employee"
 )
 
+type IEmployeeRepoReader interface {
+	IsEmployeeExists(ctx context.Context, workder entity.Employee) error
+}
+
 type IEmployeeRepoWriter interface {
 	CreateEmployee(ctx context.Context, worker entity.Employee) error
 }
@@ -19,6 +23,7 @@ type ICitizenshipRepoReader interface {
 }
 
 type IRepoReader interface {
+	IEmployeeRepoReader
 	ITitleRepoReader
 	ICitizenshipRepoReader
 }
