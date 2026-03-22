@@ -2,6 +2,7 @@ package division
 
 import (
 	"context"
+	"fmt"
 
 	entity "github.com/MaKcm14/one-team/internal/entity/division"
 )
@@ -17,5 +18,9 @@ func NewInteractor(divisionRepo IDivisionRepo) Interactor {
 }
 
 func (d Interactor) GetDivisions(ctx context.Context) ([]entity.Division, error) {
-	return nil, nil
+	divisions, err := d.divisionRepo.GetDivisions(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return divisions, nil
 }
