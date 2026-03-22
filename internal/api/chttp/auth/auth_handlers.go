@@ -14,12 +14,13 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/MaKcm14/one-team/internal/api/chttp/auth/token"
+	"github.com/MaKcm14/one-team/internal/api/chttp/server"
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 type httpError struct {
 	code int
-	resp errorResponse
+	resp server.ErrorResponse
 }
 
 func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
@@ -36,21 +37,21 @@ func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) || errors.Is(err, user.ErrWrongPassword) || errors.Is(err, user.ErrRoleNotAssign) {
 			a.log.Error(fmt.Sprintf("Error of authentication: %s", err))
-			return eCtx.JSON(http.StatusUnauthorized, errorResponse{
+			return eCtx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 				Error: ErrInvalidAuthInfo.Error(),
 			})
 		}
 		a.log.Error(fmt.Sprintf("Error of app-module: %s", err))
-		return eCtx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 
 	sid, err := a.createSession()
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of creating the session: %s", err))
-		return eCtx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 	return a.issueTokens(eCtx, sid, user.UserSession{
@@ -65,16 +66,16 @@ func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of getting the session while logout: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			ErrHandleRequest.Error(),
+		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 
 	sessionID, err := ExtractSessionIDFromCtx(ctx)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
-		return ctx.JSON(http.StatusBadRequest, errorResponse{
-			ErrRequestInfo.Error(),
+		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: server.ErrRequestInfo.Error(),
 		})
 	}
 	delete(session.Values, sessionIDCookieKey)
@@ -86,8 +87,8 @@ func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 	err = session.Save(ctx.Request(), ctx.Response().Writer)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of saving no-session in cookie while logout: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			ErrHandleRequest.Error(),
+		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 	return ctx.NoContent(http.StatusOK)
@@ -102,23 +103,23 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 	tokens := tokensRequest{}
 	if err := ctx.Bind(&tokens); err != nil {
 		a.log.Error(fmt.Sprintf("Error of binding the body-request at refresh-operation: %s", err))
-		return ctx.JSON(http.StatusBadRequest, errorResponse{
-			ErrRequestInfo.Error(),
+		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: server.ErrRequestInfo.Error(),
 		})
 	}
 
 	sessionID, err := ExtractSessionIDFromCtx(ctx)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
-		return ctx.JSON(http.StatusBadRequest, errorResponse{
-			ErrRequestInfo.Error(),
+		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: server.ErrRequestInfo.Error(),
 		})
 	}
 
 	hashRefreshToken, err := a.tokens.GetHashRefreshToken(sessionID)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of refresh-token storage: %s", err))
-		return ctx.JSON(http.StatusUnauthorized, errorResponse{
+		return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 			Error: ErrRefreshTokenNotValid.Error(),
 		})
 	}
@@ -126,7 +127,7 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 	err = a.refToken.CheckRefreshToken(hashRefreshToken, tokens.RefreshToken)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of refresh-token: it's not valid: %s", err))
-		return ctx.JSON(http.StatusUnauthorized, errorResponse{
+		return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 			Error: ErrRefreshTokenNotValid.Error(),
 		})
 	}
@@ -136,8 +137,8 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 	userSession, err := a.session.GetSession(sessionID)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of getting the session: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			ErrHandleRequest.Error(),
+		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 	return a.issueTokens(ctx, sessionID, userSession)
@@ -149,8 +150,8 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 		a.log.Error(
 			fmt.Sprintf("Error of sign-up: %s", err),
 		)
-		return eCtx.JSON(http.StatusBadRequest, errorResponse{
-			Error: ErrRequestInfo.Error(),
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: server.ErrRequestInfo.Error(),
 		})
 	}
 
@@ -162,28 +163,28 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 		if errors.Is(err, user.ErrSignUp) {
 			a.log.Warn(fmt.Sprintf("Warn of sign-up: %s", err))
 			if errors.Is(err, user.ErrUserAlreadyExists) {
-				return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+				return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 					Error: ErrSignUpUserExists.Error(),
 				})
 			} else if errors.Is(err, user.ErrVerifyPassword) {
 				if errors.Is(err, user.ErrPasswordLength) {
-					return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+					return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 						Error: "password length must be at least 9 symbols",
 					})
 				} else if errors.Is(err, user.ErrPasswordSymbols) {
-					return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+					return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 						Error: "password must contain at least 2 symbols from the list '@, #, _, !, $, ?'",
 					})
 				}
 			} else if errors.Is(err, user.ErrRoleNotFound) {
-				return eCtx.JSON(http.StatusInternalServerError, errorResponse{
+				return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 					Error: "the set user's role doesn't exist",
 				})
 			}
 		}
 		a.log.Error(fmt.Sprintf("Error of sign-up: %s", err))
-		return eCtx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 	return eCtx.NoContent(http.StatusCreated)
@@ -196,8 +197,8 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 	if !strings.HasPrefix(authHeader, basicAuth) {
 		return user.Credentials{}, &httpError{
 			code: http.StatusUnauthorized,
-			resp: errorResponse{
-				ErrInvalidAuthHeader.Error(),
+			resp: server.ErrorResponse{
+				Error: ErrInvalidAuthHeader.Error(),
 			},
 		}
 	}
@@ -206,8 +207,8 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 	if err != nil {
 		return user.Credentials{}, &httpError{
 			code: http.StatusBadRequest,
-			resp: errorResponse{
-				ErrInvalidAuthHeader.Error(),
+			resp: server.ErrorResponse{
+				Error: ErrInvalidAuthHeader.Error(),
 			},
 		}
 	}
@@ -216,8 +217,8 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 	if len(creds) != 2 {
 		return user.Credentials{}, &httpError{
 			code: http.StatusBadRequest,
-			resp: errorResponse{
-				ErrWrongAuthInfo.Error(),
+			resp: server.ErrorResponse{
+				Error: ErrWrongAuthInfo.Error(),
 			},
 		}
 	}
@@ -247,16 +248,16 @@ func (a Authenticator) issueTokens(ctx echo.Context, sid string, userSession use
 	})
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of issue the token: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 
 	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of getting the session from the cookie: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 	session.Values[sessionIDCookieKey] = sid
@@ -264,8 +265,8 @@ func (a Authenticator) issueTokens(ctx echo.Context, sid string, userSession use
 	err = a.session.Writer.Save(ctx.Request(), ctx.Response().Writer, session)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of saving the session in the cookie"))
-		return ctx.JSON(http.StatusInternalServerError, errorResponse{
-			Error: ErrHandleRequest.Error(),
+		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
 		})
 	}
 
