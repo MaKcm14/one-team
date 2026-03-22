@@ -12,13 +12,13 @@ type EmployeeRouter struct {
 	log     *slog.Logger
 	Session auth.SessionConfig
 
-	workerService employee.IEmployeeServiceModifier
+	workerService employee.IEmployeeService
 }
 
 func NewEmployyRouter(
 	log *slog.Logger,
 	session auth.SessionConfig,
-	employeeService employee.IEmployeeServiceModifier,
+	employeeService employee.IEmployeeService,
 ) EmployeeRouter {
 	return EmployeeRouter{
 		log:           log,
@@ -27,6 +27,14 @@ func NewEmployyRouter(
 	}
 }
 
-func (e EmployeeRouter) HandlerCreateEmployee(ctx echo.Context) error {
+func (e EmployeeRouter) HandlerCreateEmployee(eCtx echo.Context) error {
+	return nil
+}
+
+func (e EmployeeRouter) HandlerGetTitles(eCtx echo.Context) error {
+	return nil
+}
+
+func (e EmployeeRouter) HandlerGetCitizenships(eCtx echo.Context) error {
 	return nil
 }

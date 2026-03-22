@@ -9,3 +9,18 @@ import (
 type IEmployeeServiceModifier interface {
 	CreateEmployee(ctx context.Context, employee entity.Employee) error
 }
+
+type IEmployeeTitleReader interface {
+	GetTitles(ctx context.Context) ([]entity.Title, error)
+}
+
+type IEmployeeCitizenshipReader interface {
+	GetCitizenships(ctx context.Context) ([]entity.Citizenship, error)
+}
+
+type IEmployeeService interface {
+	IEmployeeServiceModifier
+
+	IEmployeeCitizenshipReader
+	IEmployeeTitleReader
+}
