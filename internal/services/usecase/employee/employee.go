@@ -40,6 +40,14 @@ func (e Interactor) CreateEmployee(ctx context.Context, employee entity.Employee
 	return nil
 }
 
+func (e Interactor) UpdateEmployee(ctx context.Context, employee entity.Employee) error {
+	err := e.workerRepo.UpdateEmployee(ctx, employee)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
+}
+
 func (e Interactor) GetTitles(ctx context.Context) ([]entity.Title, error) {
 	titles, err := e.workerRepo.GetTitles(ctx)
 	if err != nil {

@@ -114,3 +114,25 @@ func (e EmployeeRouter) HandlerGetCitizenships(eCtx echo.Context) error {
 		Citizenships: citizenships,
 	})
 }
+
+func (e EmployeeRouter) HandlerUpdateEmployee(eCtx echo.Context) error {
+	var worker entity.Employee
+	if err := eCtx.Bind(&worker); err != nil {
+		e.log.Error(fmt.Sprintf("Error of binding the request's body: %s", err))
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: server.ErrRequestInfo.Error(),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	err := e.workerService.UpdateEmployee(ctx, worker)
+	if err != nil {
+		e.log.Error(fmt.Sprintf("Error of updating the employee: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.NoContent(http.StatusOK)
+}

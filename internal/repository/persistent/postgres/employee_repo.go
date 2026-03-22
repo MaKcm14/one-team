@@ -96,7 +96,22 @@ func (e employeeRepo) IsEmployeeExists(ctx context.Context, worker entity.Employ
 }
 
 const createEmployeeQuery = `
-INSERT INTO usecase.employees (tin_num, snils_num, passport_data, phone_num, first_name, last_name, patronymic, address, title_id, hiring_date, unit_id, education, salary, citizenship_id)
+INSERT INTO usecase.employees (
+	tin_num, 
+	snils_num, 
+	passport_data, 
+	phone_num, 
+	first_name, 
+	last_name, 
+	patronymic, 
+	address, 
+	title_id, 
+	hiring_date, 
+	unit_id, 
+	education, 
+	salary, 
+	citizenship_id
+)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14);
 `
 
@@ -118,6 +133,51 @@ func (e employeeRepo) CreateEmployee(ctx context.Context, worker entity.Employee
 		worker.Education,
 		worker.Salary,
 		worker.Citizenship.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	return nil
+}
+
+const updateEmployeeQuery = `
+UPDATE usecase.employee
+SET tin_num=$1,
+	snils_num=$2, 
+	passport_data=$3, 
+	phone_num=$4, 
+	first_name=$5, 
+	last_name=$6, 
+	patronymic=$7, 
+	address=$8, 
+	title_id=$9, 
+	hiring_date=$10, 
+	unit_id=$11, 
+	education=$12, 
+	salary=$13, 
+	citizenship_id=$14
+WHERE id=$15;
+`
+
+func (e employeeRepo) UpdateEmployee(ctx context.Context, worker entity.Employee) error {
+	_, err := e.client.conn.Exec(
+		ctx,
+		updateEmployeeQuery,
+		worker.TinNum,
+		worker.Snils,
+		worker.PassportData,
+		worker.PhoneNum,
+		worker.FirstName,
+		worker.LastName,
+		worker.Patronymic,
+		worker.Address,
+		worker.Title.ID,
+		worker.HiringDate,
+		worker.Unit.ID,
+		worker.Education,
+		worker.Salary,
+		worker.Citizenship.ID,
+		worker.EmployeeID,
 	)
 	if err != nil {
 		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)

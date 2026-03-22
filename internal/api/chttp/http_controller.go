@@ -98,6 +98,8 @@ func (c Controller) configEndpoints() {
 		employeeGroup.GET("/get/titles", c.employeeRouter.HandlerGetTitles)
 
 		employeeGroup.POST("/create", c.employeeRouter.HandlerCreateEmployee)
+
+		employeeGroup.PUT("/update", c.employeeRouter.HandlerUpdateEmployee)
 	}
 
 	divisionGroup := c.e.Group("/division")
