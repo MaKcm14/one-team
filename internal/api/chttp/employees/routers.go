@@ -15,7 +15,7 @@ type EmployeeRouter struct {
 	workerService employee.IEmployeeService
 }
 
-func NewEmployyRouter(
+func NewEmployeeRouter(
 	log *slog.Logger,
 	session auth.SessionConfig,
 	employeeService employee.IEmployeeService,
