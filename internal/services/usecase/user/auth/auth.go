@@ -40,7 +40,7 @@ func (auth Interactor) Login(ctx context.Context, creds user.Credentials) (user.
 		return user.UserDTO{}, retErr
 	}
 
-	err = auth.checkPassword(userInfo.HashPWD, creds.Password)
+	err = auth.checkPassword(userInfo.HashPWD, creds.Password, userInfo.Salt)
 	if err != nil {
 		return user.UserDTO{}, user.ErrWrongPassword
 	}
