@@ -97,6 +97,8 @@ func (c Controller) configEndpoints() {
 		employeeGroup.GET("/get/citizenships", c.employeeRouter.HandlerGetCitizenships)
 		employeeGroup.GET("/get/titles", c.employeeRouter.HandlerGetTitles)
 
+		employeeGroup.GET("/statistics/citizenship", c.employeeRouter.HandlerCountEmployeeWithCitizenship)
+
 		employeeGroup.POST("/create", c.employeeRouter.HandlerCreateEmployee)
 
 		employeeGroup.PUT("/update", c.employeeRouter.HandlerUpdateEmployee)

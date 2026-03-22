@@ -11,6 +11,10 @@ type IEmployeeServiceWriter interface {
 	UpdateEmployee(ctx context.Context, employee entity.Employee) error
 }
 
+type IEmployeeServiceReader interface {
+	CountEmployeeWithCitizenships(ctx context.Context) ([]EmployeeCitizenshipStatistic, error)
+}
+
 type IEmployeeTitleReader interface {
 	GetTitles(ctx context.Context) ([]entity.Title, error)
 }
@@ -21,6 +25,7 @@ type IEmployeeCitizenshipReader interface {
 
 type IEmployeeService interface {
 	IEmployeeServiceWriter
+	IEmployeeServiceReader
 
 	IEmployeeCitizenshipReader
 	IEmployeeTitleReader

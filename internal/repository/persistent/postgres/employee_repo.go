@@ -6,6 +6,7 @@ import (
 
 	entity "github.com/MaKcm14/one-team/internal/entity/employee"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
+	"github.com/MaKcm14/one-team/internal/services/usecase/employee"
 )
 
 type employeeRepo struct {
@@ -229,4 +230,39 @@ func (e employeeRepo) GetCitizenships(ctx context.Context) ([]entity.Citizenship
 		citizenships = append(citizenships, citizenship)
 	}
 	return citizenships, nil
+}
+
+const countEmployeeWithCitizenships = `
+SELECT usecase.citizenships.id, usecase.citizenships.name, COUNT(*)
+FROM usecase.employees
+	JOIN
+	usecase.citizenships
+	ON usecase.employees.citizenship_id=usecase.citizenships.id
+GROUP BY usecase.citizenships.id, usecase.citizenships.name;
+`
+
+func (e employeeRepo) CountEmployeeWithCitizenships(
+	ctx context.Context,
+) ([]employee.EmployeeCitizenshipStatistic, error) {
+	res, err := e.client.conn.Query(ctx, countEmployeeWithCitizenships)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	stats := make([]employee.EmployeeCitizenshipStatistic, 0, 100)
+	for res.Next() {
+		var employeeStat employee.EmployeeCitizenshipStatistic
+
+		err := res.Scan(
+			&employeeStat.Citizenship.ID,
+			&employeeStat.Citizenship.Name,
+			&employeeStat.EmployeeCount,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+		}
+		stats = append(stats, employeeStat)
+	}
+	return stats, nil
 }

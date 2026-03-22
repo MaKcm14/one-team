@@ -63,3 +63,11 @@ func (e Interactor) GetCitizenships(ctx context.Context) ([]entity.Citizenship, 
 	}
 	return citizenships, nil
 }
+
+func (e Interactor) CountEmployeeWithCitizenships(ctx context.Context) ([]EmployeeCitizenshipStatistic, error) {
+	stats, err := e.workerRepo.CountEmployeeWithCitizenships(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return stats, nil
+}

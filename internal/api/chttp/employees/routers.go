@@ -136,3 +136,23 @@ func (e EmployeeRouter) HandlerUpdateEmployee(eCtx echo.Context) error {
 	}
 	return eCtx.NoContent(http.StatusOK)
 }
+
+func (e EmployeeRouter) HandlerCountEmployeeWithCitizenship(eCtx echo.Context) error {
+	type response struct {
+		Statistics []employee.EmployeeCitizenshipStatistic `json:"statistics"`
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	stats, err := e.workerService.CountEmployeeWithCitizenships(ctx)
+	if err != nil {
+		e.log.Error(fmt.Sprintf("Error of counting the stats: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.JSON(http.StatusOK, response{
+		Statistics: stats,
+	})
+}
