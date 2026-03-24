@@ -250,3 +250,33 @@ func (e EmployeeRouter) HandlerGetEmployeeWithFilter(eCtx echo.Context) error {
 		Employees: employeeList,
 	})
 }
+
+func (e EmployeeRouter) HandlerDeleteEmployee(eCtx echo.Context) error {
+	const reportName = "deleted_employee_report.xlsx"
+
+	employeeID, err := validateEmployeeID(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 8*time.Second)
+	defer cancel()
+
+	path, err := e.workerService.DeleteEmployee(ctx, employeeID)
+	if err != nil {
+		if errors.Is(err, employee.ErrReportCreating) {
+			e.log.Error(fmt.Sprintf("Error of creating the report for deleted employee: %s", err))
+		} else {
+			e.log.Error(fmt.Sprintf("Error of deleting the employee: %s", err))
+		}
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	eCtx.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	eCtx.Response().Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=\"%s\"", reportName))
+
+	return eCtx.Attachment(path, reportName)
+}

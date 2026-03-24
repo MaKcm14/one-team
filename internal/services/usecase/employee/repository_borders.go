@@ -21,6 +21,7 @@ type IEmployeeRepoReader interface {
 type IEmployeeRepoWriter interface {
 	CreateEmployee(ctx context.Context, worker entity.Employee) error
 	UpdateEmployee(ctx context.Context, worker entity.Employee) error
+	DeleteEmployee(ctx context.Context, employeeID int) (entity.Employee, error)
 }
 
 type ITitleRepoReader interface {

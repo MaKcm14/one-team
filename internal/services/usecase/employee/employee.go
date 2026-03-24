@@ -11,6 +11,7 @@ import (
 
 type Interactor struct {
 	workerRepo IEmployeeRepo
+	reporter   reportManager
 }
 
 func NewInteractor(workerRepo IEmployeeRepo) Interactor {
@@ -108,4 +109,21 @@ func (e Interactor) GetEmployeesWithFilters(ctx context.Context, filters Filter,
 		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}
 	return list, nil
+}
+
+func (e Interactor) DeleteEmployee(ctx context.Context, employeeID int) (string, error) {
+	worker, err := e.workerRepo.DeleteEmployee(ctx, employeeID)
+	if err != nil {
+		retErr := ErrRepoInteract
+		if errors.Is(err, persistent.ErrEmployeeNotFound) {
+			retErr = ErrEmployeeNotFound
+		}
+		return "", fmt.Errorf("%w: %s", retErr, err)
+	}
+
+	reportID, err := e.reporter.createDeletedEmployeeReport(worker)
+	if err != nil {
+		return "", err
+	}
+	return reportID, nil
 }

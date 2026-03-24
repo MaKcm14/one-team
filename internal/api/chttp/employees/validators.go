@@ -13,13 +13,30 @@ import (
 
 const (
 	// QueryParamKeys.
+	employeeIDQueryParamKey       = "employee_id"
 	pageNumQueryParamKey          = "page_num"
 	passportDataQueryParamKey     = "passport_data"
 	salaryDownBoundQueryParamKey  = "down"
 	salaryUpperBoundQueryParamKey = "up"
 	titleIDQueryParamKey          = "title_id"
-	filtersQueryParamKey          = "filters"
 )
+
+func validateEmployeeID(ctx echo.Context) (int, error) {
+	val := ctx.QueryParam(employeeIDQueryParamKey)
+	if len(val) == 0 {
+		return 0, fmt.Errorf("parameter '%s' can't be empty", employeeIDQueryParamKey)
+	}
+
+	id, err := strconv.Atoi(val)
+	if err != nil {
+		return 0, fmt.Errorf("parameter '%s' can't be parsed", employeeIDQueryParamKey)
+	}
+
+	if id < 1 {
+		return 0, fmt.Errorf("parameter '%s' can't be less than 1", employeeIDQueryParamKey)
+	}
+	return id, nil
+}
 
 func validateSalaryDownBound(ctx echo.Context) (int, error) {
 	param := ctx.QueryParam(salaryDownBoundQueryParamKey)

@@ -671,3 +671,104 @@ func (e employeeRepo) GetEmployeesByPassportDataInDivision(
 	}
 	return list, nil
 }
+
+const getEmployeeByID = `
+SELECT
+	usecase.employees.id,
+	usecase.employees.tin_num, 
+	usecase.employees.snils_num, 
+	usecase.employees.passport_data, 
+	usecase.employees.phone_num, 
+	usecase.employees.first_name, 
+	usecase.employees.last_name, 
+	usecase.employees.patronymic, 
+	usecase.employees.address, 
+	usecase.employees.title_id, 
+	usecase.titles.name,
+	usecase.employees.hiring_date, 
+	usecase.employees.unit_id,
+	usecase.divisions.name,
+	usecase.divisions.type,
+	usecase.divisions.state_size,
+	usecase.divisions.superdivision_id,
+	usecase.employees.education, 
+	usecase.employees.salary, 
+	usecase.employees.citizenship_id,
+	usecase.citizenships.name
+FROM 
+	usecase.employees
+		JOIN
+	usecase.divisions
+	ON usecase.employees.unit_id=usecase.divsions.unit_id
+		JOIN
+	usecase.titles
+	ON usecase.employees.title_id=usecase.titles.id
+		JOIN
+	usecase.citizenships
+	ON usecase.employees.citizenship_id=usecase.citizenships.id
+WHERE 
+	usecase.empoyees.id=$1;
+`
+
+func (e employeeRepo) getEmployeeByID(ctx context.Context, employeeID int) (entity.Employee, error) {
+	res, err := e.client.conn.Query(
+		ctx,
+		getEmployeeByID,
+		employeeID,
+	)
+	if err != nil {
+		return entity.Employee{}, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return entity.Employee{}, persistent.ErrEmployeeNotFound
+	}
+
+	var worker entity.Employee
+	err = res.Scan(
+		&worker.EmployeeID,
+		&worker.TinNum,
+		&worker.Snils,
+		&worker.PassportData,
+		&worker.PhoneNum,
+		&worker.FirstName,
+		&worker.LastName,
+		&worker.Patronymic,
+		&worker.Address,
+		&worker.Title.ID,
+		&worker.Title.Name,
+		&worker.HiringDate,
+		&worker.Unit.ID,
+		&worker.Unit.Name,
+		&worker.Unit.Type,
+		&worker.Unit.StateSize,
+		&worker.Unit.SuperdivisionID,
+		&worker.Education,
+		&worker.Salary,
+		&worker.Citizenship.ID,
+		&worker.Citizenship.Name,
+	)
+	if err != nil {
+		return entity.Employee{}, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	return worker, nil
+}
+
+const deleteEmployee = `
+DELETE FROM usecase.employees
+WHERE usecase.employees.id=$1;
+`
+
+func (e employeeRepo) DeleteEmployee(ctx context.Context, employeeID int) (entity.Employee, error) {
+	worker, err := e.getEmployeeByID(ctx, employeeID)
+	if err != nil {
+		return entity.Employee{}, err
+	}
+
+	_, err = e.client.conn.Exec(ctx, deleteEmployee, employeeID)
+	if err != nil {
+		return entity.Employee{}, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	return worker, nil
+}

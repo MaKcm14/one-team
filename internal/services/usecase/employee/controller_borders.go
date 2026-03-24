@@ -9,6 +9,7 @@ import (
 type IEmployeeServiceWriter interface {
 	CreateEmployee(ctx context.Context, employee entity.Employee) error
 	UpdateEmployee(ctx context.Context, employee entity.Employee) error
+	DeleteEmployee(ctx context.Context, employeeID int) (string, error)
 }
 
 type IEmployeeServiceReader interface {
