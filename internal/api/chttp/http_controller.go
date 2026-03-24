@@ -96,6 +96,7 @@ func (c Controller) configEndpoints() {
 	{
 		employeeGroup.GET("/get/citizenships", c.employeeRouter.HandlerGetCitizenships)
 		employeeGroup.GET("/get/titles", c.employeeRouter.HandlerGetTitles)
+		employeeGroup.GET("/get/employee", c.employeeRouter.HandlerGetEmployeeWithFilter)
 
 		employeeGroup.GET("/statistics/citizenship", c.employeeRouter.HandlerCountEmployeeWithCitizenship)
 		employeeGroup.GET("/statistics/salary", c.employeeRouter.HandlerCountEmployeesWithSalaryBoundary)

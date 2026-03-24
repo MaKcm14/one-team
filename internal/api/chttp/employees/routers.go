@@ -43,10 +43,17 @@ func (e EmployeeRouter) HandlerCreateEmployee(eCtx echo.Context) error {
 		})
 	}
 
+	err := validatePassportData(worker.PassportData)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	err := e.workerService.CreateEmployee(ctx, worker)
+	err = e.workerService.CreateEmployee(ctx, worker)
 	if err != nil {
 		if errors.Is(err, employee.ErrTitleNotFound) {
 			e.log.Warn(fmt.Sprintf("Warn of unknown title in request: %s", err))
@@ -176,6 +183,12 @@ func (e EmployeeRouter) HandlerCountEmployeesWithSalaryBoundary(eCtx echo.Contex
 		})
 	}
 
+	if downBound > upperBound {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: server.ErrRequestInfo.Error(),
+		})
+	}
+
 	titleID, err := validateTitleID(eCtx)
 	if err != nil {
 		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
@@ -201,5 +214,39 @@ func (e EmployeeRouter) HandlerCountEmployeesWithSalaryBoundary(eCtx echo.Contex
 	}
 	return eCtx.JSON(http.StatusOK, response{
 		Count: count,
+	})
+}
+
+func (e EmployeeRouter) HandlerGetEmployeeWithFilter(eCtx echo.Context) error {
+	type response struct {
+		Employees []entity.Employee `json:"employees"`
+	}
+
+	pageNum, err := validatePageNum(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	filters, err := validateFilters(eCtx, pageNum)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 8*time.Second)
+	defer cancel()
+
+	employeeList, err := e.workerService.GetEmployeesWithFilters(ctx, filters, pageNum)
+	if err != nil {
+		e.log.Error(fmt.Sprintf("Error of getting the employees: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.JSON(http.StatusOK, response{
+		Employees: employeeList,
 	})
 }

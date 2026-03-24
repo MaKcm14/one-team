@@ -83,3 +83,29 @@ func (e Interactor) CountEmployeesWithSalaryBounds(
 	}
 	return count, nil
 }
+
+func (e Interactor) GetEmployeesWithFilters(ctx context.Context, filters Filter, pageNum int) ([]entity.Employee, error) {
+	var (
+		list []entity.Employee
+		err  error
+	)
+
+	if filters.Names.IsActive {
+		if filters.Unit.IsActive {
+			list, err = e.workerRepo.GetEmployeesByNameInDivision(ctx, filters.Names, filters.Unit)
+		} else {
+			list, err = e.workerRepo.GetEmployeesByName(ctx, filters.Names)
+		}
+	} else if filters.Passport.IsActive {
+		if filters.Unit.IsActive {
+			list, err = e.workerRepo.GetEmployeesByPassportDataInDivision(ctx, filters.Passport, filters.Unit)
+		} else {
+			list, err = e.workerRepo.GetEmployeesByPassportData(ctx, filters.Passport)
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return list, nil
+}

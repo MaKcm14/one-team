@@ -10,6 +10,12 @@ type IEmployeeRepoReader interface {
 	IsEmployeeExists(ctx context.Context, worker entity.Employee) error
 	CountEmployeesWithCitizenship(ctx context.Context) ([]EmployeeCitizenshipStatistic, error)
 	CountEmployeesWithSalaryBounds(ctx context.Context, titleID int, bounds SalaryBounds) (int, error)
+
+	GetEmployeesByName(ctx context.Context, filter NamesFilter) ([]entity.Employee, error)
+	GetEmployeesByPassportData(ctx context.Context, filter PassportFilter) ([]entity.Employee, error)
+
+	GetEmployeesByNameInDivision(ctx context.Context, filter NamesFilter, div UnitFilter) ([]entity.Employee, error)
+	GetEmployeesByPassportDataInDivision(ctx context.Context, filters PassportFilter, div UnitFilter) ([]entity.Employee, error)
 }
 
 type IEmployeeRepoWriter interface {

@@ -14,6 +14,7 @@ type IEmployeeServiceWriter interface {
 type IEmployeeServiceReader interface {
 	CountEmployeesWithCitizenship(ctx context.Context) ([]EmployeeCitizenshipStatistic, error)
 	CountEmployeesWithSalaryBounds(ctx context.Context, titleID int, bounds SalaryBounds) (int, error)
+	GetEmployeesWithFilters(ctx context.Context, filters Filter, pageNum int) ([]entity.Employee, error)
 }
 
 type IEmployeeTitleReader interface {

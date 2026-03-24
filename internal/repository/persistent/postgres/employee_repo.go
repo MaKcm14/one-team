@@ -300,3 +300,374 @@ func (e employeeRepo) CountEmployeesWithSalaryBounds(
 	}
 	return count, nil
 }
+
+const getEmployeesByNameQuery = `
+SELECT
+	usecase.employees.id,
+	usecase.employees.tin_num, 
+	usecase.employees.snils_num, 
+	usecase.employees.passport_data, 
+	usecase.employees.phone_num, 
+	usecase.employees.first_name, 
+	usecase.employees.last_name, 
+	usecase.employees.patronymic, 
+	usecase.employees.address, 
+	usecase.employees.title_id, 
+	usecase.titles.name,
+	usecase.employees.hiring_date, 
+	usecase.employees.unit_id,
+	usecase.divisions.name,
+	usecase.divisions.type,
+	usecase.divisions.state_size,
+	usecase.divisions.superdivision_id,
+	usecase.employees.education, 
+	usecase.employees.salary, 
+	usecase.employees.citizenship_id,
+	usecase.citizenships.name
+FROM 
+	usecase.employees
+		JOIN
+	usecase.divisions
+	ON usecase.employees.unit_id=usecase.divsions.unit_id
+		JOIN
+	usecase.titles
+	ON usecase.employees.title_id=usecase.titles.id
+		JOIN
+	usecase.citizenships
+	ON usecase.employees.citizenship_id=usecase.citizenships.id
+WHERE 
+	usecase.employees.first_name LIKE '%$1%' AND
+	usecase.employees.last_name LIKE '%$2%' AND
+	usecase.employees.patronymic LIKE '%$3%'
+OFFSET $4
+LIMIT $5;
+`
+
+func (e employeeRepo) GetEmployeesByName(ctx context.Context, filter employee.NamesFilter) ([]entity.Employee, error) {
+	res, err := e.client.conn.Query(
+		ctx,
+		getEmployeesByNameQuery,
+		filter.FirstName,
+		filter.LastName,
+		filter.Patronymic,
+		filter.PageNum*employee.PaginationSize,
+		employee.PaginationSize,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	list := make([]entity.Employee, 0, 1_000)
+	for res.Next() {
+		var worker entity.Employee
+		err := res.Scan(
+			&worker.EmployeeID,
+			&worker.TinNum,
+			&worker.Snils,
+			&worker.PassportData,
+			&worker.PhoneNum,
+			&worker.FirstName,
+			&worker.LastName,
+			&worker.Patronymic,
+			&worker.Address,
+			&worker.Title.ID,
+			&worker.Title.Name,
+			&worker.HiringDate,
+			&worker.Unit.ID,
+			&worker.Unit.Name,
+			&worker.Unit.Type,
+			&worker.Unit.StateSize,
+			&worker.Unit.SuperdivisionID,
+			&worker.Education,
+			&worker.Salary,
+			&worker.Citizenship.ID,
+			&worker.Citizenship.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+		}
+	}
+	return list, nil
+}
+
+const getEmployeesByPassportDataQuery = `
+SELECT
+	usecase.employees.id,
+	usecase.employees.tin_num, 
+	usecase.employees.snils_num, 
+	usecase.employees.passport_data, 
+	usecase.employees.phone_num, 
+	usecase.employees.first_name, 
+	usecase.employees.last_name, 
+	usecase.employees.patronymic, 
+	usecase.employees.address, 
+	usecase.employees.title_id, 
+	usecase.titles.name,
+	usecase.employees.hiring_date, 
+	usecase.employees.unit_id,
+	usecase.divisions.name,
+	usecase.divisions.type,
+	usecase.divisions.state_size,
+	usecase.divisions.superdivision_id,
+	usecase.employees.education, 
+	usecase.employees.salary, 
+	usecase.employees.citizenship_id,
+	usecase.citizenships.name
+FROM 
+	usecase.employees
+		JOIN
+	usecase.divisions
+	ON usecase.employees.unit_id=usecase.divsions.unit_id
+		JOIN
+	usecase.titles
+	ON usecase.employees.title_id=usecase.titles.id
+		JOIN
+	usecase.citizenships
+	ON usecase.employees.citizenship_id=usecase.citizenships.id
+WHERE 
+	usecase.employees.passport_data LIKE '%$1%'
+OFFSET $2
+LIMIT $3;
+`
+
+func (e employeeRepo) GetEmployeesByPassportData(
+	ctx context.Context,
+	filter employee.PassportFilter,
+) ([]entity.Employee, error) {
+	res, err := e.client.conn.Query(
+		ctx,
+		getEmployeesByNameQuery,
+		filter.PassportData,
+		filter.PageNum*employee.PaginationSize,
+		employee.PaginationSize,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	list := make([]entity.Employee, 0, 1_000)
+	for res.Next() {
+		var worker entity.Employee
+		err := res.Scan(
+			&worker.EmployeeID,
+			&worker.TinNum,
+			&worker.Snils,
+			&worker.PassportData,
+			&worker.PhoneNum,
+			&worker.FirstName,
+			&worker.LastName,
+			&worker.Patronymic,
+			&worker.Address,
+			&worker.Title.ID,
+			&worker.Title.Name,
+			&worker.HiringDate,
+			&worker.Unit.ID,
+			&worker.Unit.Name,
+			&worker.Unit.Type,
+			&worker.Unit.StateSize,
+			&worker.Unit.SuperdivisionID,
+			&worker.Education,
+			&worker.Salary,
+			&worker.Citizenship.ID,
+			&worker.Citizenship.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+		}
+	}
+	return list, nil
+}
+
+const getEmployeesByNameInDivisionQuery = `
+SELECT
+	usecase.employees.id,
+	usecase.employees.tin_num, 
+	usecase.employees.snils_num, 
+	usecase.employees.passport_data, 
+	usecase.employees.phone_num, 
+	usecase.employees.first_name, 
+	usecase.employees.last_name, 
+	usecase.employees.patronymic, 
+	usecase.employees.address, 
+	usecase.employees.title_id, 
+	usecase.titles.name,
+	usecase.employees.hiring_date, 
+	usecase.employees.unit_id,
+	usecase.divisions.name,
+	usecase.divisions.type,
+	usecase.divisions.state_size,
+	usecase.divisions.superdivision_id,
+	usecase.employees.education, 
+	usecase.employees.salary, 
+	usecase.employees.citizenship_id,
+	usecase.citizenships.name
+FROM 
+	usecase.employees
+		JOIN
+	usecase.divisions
+	ON usecase.employees.unit_id=usecase.divsions.unit_id
+		JOIN
+	usecase.titles
+	ON usecase.employees.title_id=usecase.titles.id
+		JOIN
+	usecase.citizenships
+	ON usecase.employees.citizenship_id=usecase.citizenships.id
+WHERE 
+	usecase.employees.first_name LIKE '%$1%' AND
+	usecase.employees.last_name LIKE '%$2%' AND
+	usecase.employees.patronymic LIKE '%$3%' AND
+	usecase.divisions.name LIKE '%$4%' AND
+	usecase.divisions.type LIKE '%$5%'
+OFFSET $6
+LIMIT $7;
+`
+
+func (e employeeRepo) GetEmployeesByNameInDivision(
+	ctx context.Context,
+	filter employee.NamesFilter,
+	div employee.UnitFilter,
+) ([]entity.Employee, error) {
+	res, err := e.client.conn.Query(
+		ctx,
+		getEmployeesByNameQuery,
+		filter.FirstName,
+		filter.LastName,
+		filter.Patronymic,
+		div.Name,
+		div.Type,
+		filter.PageNum*employee.PaginationSize,
+		employee.PaginationSize,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	list := make([]entity.Employee, 0, 1_000)
+	for res.Next() {
+		var worker entity.Employee
+		err := res.Scan(
+			&worker.EmployeeID,
+			&worker.TinNum,
+			&worker.Snils,
+			&worker.PassportData,
+			&worker.PhoneNum,
+			&worker.FirstName,
+			&worker.LastName,
+			&worker.Patronymic,
+			&worker.Address,
+			&worker.Title.ID,
+			&worker.Title.Name,
+			&worker.HiringDate,
+			&worker.Unit.ID,
+			&worker.Unit.Name,
+			&worker.Unit.Type,
+			&worker.Unit.StateSize,
+			&worker.Unit.SuperdivisionID,
+			&worker.Education,
+			&worker.Salary,
+			&worker.Citizenship.ID,
+			&worker.Citizenship.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+		}
+	}
+	return list, nil
+}
+
+const getEmployeesByPassportDataInDivisionQuery = `
+SELECT
+	usecase.employees.id,
+	usecase.employees.tin_num, 
+	usecase.employees.snils_num, 
+	usecase.employees.passport_data, 
+	usecase.employees.phone_num, 
+	usecase.employees.first_name, 
+	usecase.employees.last_name, 
+	usecase.employees.patronymic, 
+	usecase.employees.address, 
+	usecase.employees.title_id, 
+	usecase.titles.name,
+	usecase.employees.hiring_date, 
+	usecase.employees.unit_id,
+	usecase.divisions.name,
+	usecase.divisions.type,
+	usecase.divisions.state_size,
+	usecase.divisions.superdivision_id,
+	usecase.employees.education, 
+	usecase.employees.salary, 
+	usecase.employees.citizenship_id,
+	usecase.citizenships.name
+FROM 
+	usecase.employees
+		JOIN
+	usecase.divisions
+	ON usecase.employees.unit_id=usecase.divsions.unit_id
+		JOIN
+	usecase.titles
+	ON usecase.employees.title_id=usecase.titles.id
+		JOIN
+	usecase.citizenships
+	ON usecase.employees.citizenship_id=usecase.citizenships.id
+WHERE 
+	usecase.employees.passport_data LIKE '%$1%' AND
+	usecase.divisions.name LIKE '%$2%' AND
+	usecase.divisions.type LIKE '%$3%'
+OFFSET $4
+LIMIT $5;
+`
+
+func (e employeeRepo) GetEmployeesByPassportDataInDivision(
+	ctx context.Context,
+	filter employee.PassportFilter,
+	div employee.UnitFilter,
+) ([]entity.Employee, error) {
+	res, err := e.client.conn.Query(
+		ctx,
+		getEmployeesByNameQuery,
+		filter.PassportData,
+		div.Name,
+		div.Type,
+		filter.PageNum*employee.PaginationSize,
+		employee.PaginationSize,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	list := make([]entity.Employee, 0, 1_000)
+	for res.Next() {
+		var worker entity.Employee
+		err := res.Scan(
+			&worker.EmployeeID,
+			&worker.TinNum,
+			&worker.Snils,
+			&worker.PassportData,
+			&worker.PhoneNum,
+			&worker.FirstName,
+			&worker.LastName,
+			&worker.Patronymic,
+			&worker.Address,
+			&worker.Title.ID,
+			&worker.Title.Name,
+			&worker.HiringDate,
+			&worker.Unit.ID,
+			&worker.Unit.Name,
+			&worker.Unit.Type,
+			&worker.Unit.StateSize,
+			&worker.Unit.SuperdivisionID,
+			&worker.Education,
+			&worker.Salary,
+			&worker.Citizenship.ID,
+			&worker.Citizenship.Name,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+		}
+	}
+	return list, nil
+}

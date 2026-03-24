@@ -10,6 +10,14 @@ const (
 	GroupTypeName       DivisionType = "group"
 )
 
+func IsDivisionTypeValid(divType DivisionType) bool {
+	switch divType {
+	case DivisionTypeName, DirectorateTypeName, DepartmentTypeName, UnitTypeName, GroupTypeName:
+		return true
+	}
+	return false
+}
+
 type Division struct {
 	ID              int          `json:"division_id,omitempty"`
 	Name            string       `json:"name,omitempty"`
