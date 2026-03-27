@@ -101,9 +101,12 @@ func (c Controller) configEndpoints() {
 		employeeGroup.GET("/statistics/citizenship", c.employeeRouter.HandlerCountEmployeeWithCitizenship)
 		employeeGroup.GET("/statistics/salary", c.employeeRouter.HandlerCountEmployeesWithSalaryBoundary)
 
+		// TODO: TEST IT:
 		employeeGroup.POST("/create", c.employeeRouter.HandlerCreateEmployee)
 
 		employeeGroup.PUT("/update", c.employeeRouter.HandlerUpdateEmployee)
+		employeeGroup.DELETE("/delete", c.employeeRouter.HandlerDeleteEmployee)
+		// END TEST BLOCK.
 	}
 
 	divisionGroup := c.e.Group("/division")

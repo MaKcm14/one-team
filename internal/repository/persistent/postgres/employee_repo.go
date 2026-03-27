@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	entity "github.com/MaKcm14/one-team/internal/entity/employee"
@@ -209,13 +210,13 @@ func (e employeeRepo) GetTitles(ctx context.Context) ([]entity.Title, error) {
 	return titles, nil
 }
 
-const getCitizenshipQuery = `
+const getCitizenshipsQuery = `
 SELECT id, name
 FROM usecase.citizenships;
 `
 
 func (e employeeRepo) GetCitizenships(ctx context.Context) ([]entity.Citizenship, error) {
-	res, err := e.client.conn.Query(ctx, getTitlesQuery)
+	res, err := e.client.conn.Query(ctx, getCitizenshipsQuery)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 	}
@@ -257,7 +258,7 @@ func (e employeeRepo) CountEmployeesWithCitizenship(
 		err := res.Scan(
 			&employeeStat.Citizenship.ID,
 			&employeeStat.Citizenship.Name,
-			&employeeStat.EmployeeCount,
+			&employeeStat.EmployeesCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
@@ -328,7 +329,7 @@ FROM
 	usecase.employees
 		JOIN
 	usecase.divisions
-	ON usecase.employees.unit_id=usecase.divsions.unit_id
+	ON usecase.employees.unit_id=usecase.divisions.id
 		JOIN
 	usecase.titles
 	ON usecase.employees.title_id=usecase.titles.id
@@ -336,9 +337,9 @@ FROM
 	usecase.citizenships
 	ON usecase.employees.citizenship_id=usecase.citizenships.id
 WHERE 
-	usecase.employees.first_name LIKE '%$1%' AND
-	usecase.employees.last_name LIKE '%$2%' AND
-	usecase.employees.patronymic LIKE '%$3%'
+	usecase.employees.first_name LIKE $1 AND
+	usecase.employees.last_name LIKE $2 AND
+	usecase.employees.patronymic LIKE $3
 OFFSET $4
 LIMIT $5;
 `
@@ -347,9 +348,9 @@ func (e employeeRepo) GetEmployeesByName(ctx context.Context, filter employee.Na
 	res, err := e.client.conn.Query(
 		ctx,
 		getEmployeesByNameQuery,
-		filter.FirstName,
-		filter.LastName,
-		filter.Patronymic,
+		as(filter.FirstName),
+		as(filter.LastName),
+		as(filter.Patronymic),
 		filter.PageNum*employee.PaginationSize,
 		employee.PaginationSize,
 	)
@@ -358,9 +359,12 @@ func (e employeeRepo) GetEmployeesByName(ctx context.Context, filter employee.Na
 	}
 	defer res.Close()
 
-	list := make([]entity.Employee, 0, 1_000)
+	list := make([]entity.Employee, 0, 1000)
 	for res.Next() {
-		var worker entity.Employee
+		var (
+			worker          entity.Employee
+			superdivisionID sql.NullInt64
+		)
 		err := res.Scan(
 			&worker.EmployeeID,
 			&worker.TinNum,
@@ -378,7 +382,7 @@ func (e employeeRepo) GetEmployeesByName(ctx context.Context, filter employee.Na
 			&worker.Unit.Name,
 			&worker.Unit.Type,
 			&worker.Unit.StateSize,
-			&worker.Unit.SuperdivisionID,
+			&superdivisionID,
 			&worker.Education,
 			&worker.Salary,
 			&worker.Citizenship.ID,
@@ -387,6 +391,9 @@ func (e employeeRepo) GetEmployeesByName(ctx context.Context, filter employee.Na
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 		}
+		worker.Unit.SuperdivisionID = int(superdivisionID.Int64)
+
+		list = append(list, worker)
 	}
 	return list, nil
 }
@@ -418,7 +425,7 @@ FROM
 	usecase.employees
 		JOIN
 	usecase.divisions
-	ON usecase.employees.unit_id=usecase.divsions.unit_id
+	ON usecase.employees.unit_id=usecase.divisions.id
 		JOIN
 	usecase.titles
 	ON usecase.employees.title_id=usecase.titles.id
@@ -426,7 +433,7 @@ FROM
 	usecase.citizenships
 	ON usecase.employees.citizenship_id=usecase.citizenships.id
 WHERE 
-	usecase.employees.passport_data LIKE '%$1%'
+	usecase.employees.passport_data LIKE $1
 OFFSET $2
 LIMIT $3;
 `
@@ -437,8 +444,8 @@ func (e employeeRepo) GetEmployeesByPassportData(
 ) ([]entity.Employee, error) {
 	res, err := e.client.conn.Query(
 		ctx,
-		getEmployeesByNameQuery,
-		filter.PassportData,
+		getEmployeesByPassportDataQuery,
+		as(filter.PassportData),
 		filter.PageNum*employee.PaginationSize,
 		employee.PaginationSize,
 	)
@@ -449,7 +456,10 @@ func (e employeeRepo) GetEmployeesByPassportData(
 
 	list := make([]entity.Employee, 0, 1_000)
 	for res.Next() {
-		var worker entity.Employee
+		var (
+			worker          entity.Employee
+			superdivisionID sql.NullInt64
+		)
 		err := res.Scan(
 			&worker.EmployeeID,
 			&worker.TinNum,
@@ -467,7 +477,7 @@ func (e employeeRepo) GetEmployeesByPassportData(
 			&worker.Unit.Name,
 			&worker.Unit.Type,
 			&worker.Unit.StateSize,
-			&worker.Unit.SuperdivisionID,
+			&superdivisionID,
 			&worker.Education,
 			&worker.Salary,
 			&worker.Citizenship.ID,
@@ -476,6 +486,9 @@ func (e employeeRepo) GetEmployeesByPassportData(
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 		}
+		worker.Unit.SuperdivisionID = int(superdivisionID.Int64)
+
+		list = append(list, worker)
 	}
 	return list, nil
 }
@@ -507,7 +520,7 @@ FROM
 	usecase.employees
 		JOIN
 	usecase.divisions
-	ON usecase.employees.unit_id=usecase.divsions.unit_id
+	ON usecase.employees.unit_id=usecase.divisions.id
 		JOIN
 	usecase.titles
 	ON usecase.employees.title_id=usecase.titles.id
@@ -515,11 +528,11 @@ FROM
 	usecase.citizenships
 	ON usecase.employees.citizenship_id=usecase.citizenships.id
 WHERE 
-	usecase.employees.first_name LIKE '%$1%' AND
-	usecase.employees.last_name LIKE '%$2%' AND
-	usecase.employees.patronymic LIKE '%$3%' AND
-	usecase.divisions.name LIKE '%$4%' AND
-	usecase.divisions.type LIKE '%$5%'
+	usecase.employees.first_name LIKE $1 AND
+	usecase.employees.last_name LIKE $2 AND
+	usecase.employees.patronymic LIKE $3 AND
+	usecase.divisions.name LIKE $4 AND
+	usecase.divisions.type LIKE $5
 OFFSET $6
 LIMIT $7;
 `
@@ -531,12 +544,12 @@ func (e employeeRepo) GetEmployeesByNameInDivision(
 ) ([]entity.Employee, error) {
 	res, err := e.client.conn.Query(
 		ctx,
-		getEmployeesByNameQuery,
-		filter.FirstName,
-		filter.LastName,
-		filter.Patronymic,
-		div.Name,
-		div.Type,
+		getEmployeesByNameInDivisionQuery,
+		as(filter.FirstName),
+		as(filter.LastName),
+		as(filter.Patronymic),
+		as(div.Name),
+		as(string(div.Type)),
 		filter.PageNum*employee.PaginationSize,
 		employee.PaginationSize,
 	)
@@ -547,7 +560,10 @@ func (e employeeRepo) GetEmployeesByNameInDivision(
 
 	list := make([]entity.Employee, 0, 1_000)
 	for res.Next() {
-		var worker entity.Employee
+		var (
+			worker          entity.Employee
+			superdivisionID sql.NullInt64
+		)
 		err := res.Scan(
 			&worker.EmployeeID,
 			&worker.TinNum,
@@ -565,7 +581,7 @@ func (e employeeRepo) GetEmployeesByNameInDivision(
 			&worker.Unit.Name,
 			&worker.Unit.Type,
 			&worker.Unit.StateSize,
-			&worker.Unit.SuperdivisionID,
+			&superdivisionID,
 			&worker.Education,
 			&worker.Salary,
 			&worker.Citizenship.ID,
@@ -574,6 +590,9 @@ func (e employeeRepo) GetEmployeesByNameInDivision(
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 		}
+		worker.Unit.SuperdivisionID = int(superdivisionID.Int64)
+
+		list = append(list, worker)
 	}
 	return list, nil
 }
@@ -605,7 +624,7 @@ FROM
 	usecase.employees
 		JOIN
 	usecase.divisions
-	ON usecase.employees.unit_id=usecase.divsions.unit_id
+	ON usecase.employees.unit_id=usecase.divisions.id
 		JOIN
 	usecase.titles
 	ON usecase.employees.title_id=usecase.titles.id
@@ -613,9 +632,9 @@ FROM
 	usecase.citizenships
 	ON usecase.employees.citizenship_id=usecase.citizenships.id
 WHERE 
-	usecase.employees.passport_data LIKE '%$1%' AND
-	usecase.divisions.name LIKE '%$2%' AND
-	usecase.divisions.type LIKE '%$3%'
+	usecase.employees.passport_data LIKE $1 AND
+	usecase.divisions.name LIKE $2 AND
+	usecase.divisions.type LIKE $3
 OFFSET $4
 LIMIT $5;
 `
@@ -627,10 +646,10 @@ func (e employeeRepo) GetEmployeesByPassportDataInDivision(
 ) ([]entity.Employee, error) {
 	res, err := e.client.conn.Query(
 		ctx,
-		getEmployeesByNameQuery,
-		filter.PassportData,
-		div.Name,
-		div.Type,
+		getEmployeesByPassportDataInDivisionQuery,
+		as(filter.PassportData),
+		as(div.Name),
+		as(string(div.Type)),
 		filter.PageNum*employee.PaginationSize,
 		employee.PaginationSize,
 	)
@@ -641,7 +660,10 @@ func (e employeeRepo) GetEmployeesByPassportDataInDivision(
 
 	list := make([]entity.Employee, 0, 1_000)
 	for res.Next() {
-		var worker entity.Employee
+		var (
+			worker          entity.Employee
+			superdivisionID sql.NullInt64
+		)
 		err := res.Scan(
 			&worker.EmployeeID,
 			&worker.TinNum,
@@ -659,7 +681,7 @@ func (e employeeRepo) GetEmployeesByPassportDataInDivision(
 			&worker.Unit.Name,
 			&worker.Unit.Type,
 			&worker.Unit.StateSize,
-			&worker.Unit.SuperdivisionID,
+			&superdivisionID,
 			&worker.Education,
 			&worker.Salary,
 			&worker.Citizenship.ID,
@@ -668,6 +690,9 @@ func (e employeeRepo) GetEmployeesByPassportDataInDivision(
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 		}
+		worker.Unit.SuperdivisionID = int(superdivisionID.Int64)
+
+		list = append(list, worker)
 	}
 	return list, nil
 }
@@ -699,7 +724,7 @@ FROM
 	usecase.employees
 		JOIN
 	usecase.divisions
-	ON usecase.employees.unit_id=usecase.divsions.unit_id
+	ON usecase.employees.unit_id=usecase.divisions.id
 		JOIN
 	usecase.titles
 	ON usecase.employees.title_id=usecase.titles.id
@@ -725,7 +750,10 @@ func (e employeeRepo) getEmployeeByID(ctx context.Context, employeeID int) (enti
 		return entity.Employee{}, persistent.ErrEmployeeNotFound
 	}
 
-	var worker entity.Employee
+	var (
+		worker          entity.Employee
+		superdivisionID sql.NullInt64
+	)
 	err = res.Scan(
 		&worker.EmployeeID,
 		&worker.TinNum,
@@ -743,7 +771,7 @@ func (e employeeRepo) getEmployeeByID(ctx context.Context, employeeID int) (enti
 		&worker.Unit.Name,
 		&worker.Unit.Type,
 		&worker.Unit.StateSize,
-		&worker.Unit.SuperdivisionID,
+		&superdivisionID,
 		&worker.Education,
 		&worker.Salary,
 		&worker.Citizenship.ID,
@@ -752,6 +780,8 @@ func (e employeeRepo) getEmployeeByID(ctx context.Context, employeeID int) (enti
 	if err != nil {
 		return entity.Employee{}, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 	}
+	worker.Unit.SuperdivisionID = int(superdivisionID.Int64)
+
 	return worker, nil
 }
 
@@ -771,4 +801,8 @@ func (e employeeRepo) DeleteEmployee(ctx context.Context, employeeID int) (entit
 		return entity.Employee{}, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 	}
 	return worker, nil
+}
+
+func as(str string) string {
+	return fmt.Sprintf("%%%s%%", str)
 }

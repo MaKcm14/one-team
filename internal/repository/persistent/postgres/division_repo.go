@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 
 	entity "github.com/MaKcm14/one-team/internal/entity/division"
@@ -26,17 +27,22 @@ func (d divisionRepo) GetDivisions(ctx context.Context) ([]entity.Division, erro
 
 	divisions := make([]entity.Division, 0, 30)
 	for res.Next() {
-		var division entity.Division
+		var (
+			division        entity.Division
+			superdivisionID sql.NullInt64
+		)
 		err := res.Scan(
 			&division.ID,
 			&division.Name,
 			&division.Type,
 			&division.StateSize,
-			&division.SuperdivisionID,
+			&superdivisionID,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 		}
+		division.SuperdivisionID = int(superdivisionID.Int64)
+
 		divisions = append(divisions, division)
 	}
 	return divisions, nil

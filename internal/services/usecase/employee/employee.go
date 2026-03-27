@@ -58,7 +58,7 @@ func (e Interactor) GetTitles(ctx context.Context) ([]entity.Title, error) {
 }
 
 func (e Interactor) GetCitizenships(ctx context.Context) ([]entity.Citizenship, error) {
-	citizenships, err := e.GetCitizenships(ctx)
+	citizenships, err := e.workerRepo.GetCitizenships(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}

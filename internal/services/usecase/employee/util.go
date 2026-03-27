@@ -9,7 +9,7 @@ const (
 	// FilterTypes.
 	PassportDataFilterName = "passport_data"
 	NamesFilterName        = "names"
-	UnitFilterName         = "units"
+	UnitFilterName         = "unit"
 	UnitTypeFilterName     = "unit_type"
 
 	PaginationSize = 25
@@ -43,8 +43,8 @@ type Filter struct {
 }
 
 type EmployeeCitizenshipStatistic struct {
-	Citizenship   entity.Citizenship `json:"citizenship"`
-	EmployeeCount int                `json:"employee_count"`
+	Citizenship    entity.Citizenship `json:"citizenship"`
+	EmployeesCount int                `json:"employees_count"`
 }
 
 type SalaryBounds struct {

@@ -119,14 +119,13 @@ func validateFilters(ctx echo.Context, pageNum int) (employee.Filter, error) {
 		filter.Unit.Name = val
 
 		val = ctx.QueryParam(employee.UnitTypeFilterName)
-		if entity.IsDivisionTypeValid(entity.DivisionType(val)) {
+		if !entity.IsDivisionTypeValid(entity.DivisionType(val)) {
 			return employee.Filter{}, fmt.Errorf("'%s' is wrong: can't recognize it", employee.UnitTypeFilterName)
 		}
 		filter.Unit.Type = entity.DivisionType(val)
 	}
 
-	if !filter.Names.IsActive &&
-		!filter.Passport.IsActive && !filter.Unit.IsActive {
+	if !filter.Names.IsActive && !filter.Passport.IsActive {
 		return employee.Filter{}, fmt.Errorf("unknown filter format")
 	}
 
