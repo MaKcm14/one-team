@@ -7,6 +7,7 @@ import (
 
 	entity "github.com/MaKcm14/one-team/internal/entity/division"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
+	"github.com/MaKcm14/one-team/internal/services/usecase/division"
 )
 
 type divisionRepo struct {
@@ -15,11 +16,17 @@ type divisionRepo struct {
 
 const getDivisionsQuery = `
 SELECT id, name, type, state_size, superdivision_id
-FROM usecase.divisions;
+FROM usecase.divisions
+WHERE name LIKE $1 AND type LIKE $2;
 `
 
-func (d divisionRepo) GetDivisions(ctx context.Context) ([]entity.Division, error) {
-	res, err := d.client.conn.Query(ctx, getDivisionsQuery)
+func (d divisionRepo) GetDivisionsByName(ctx context.Context, filter division.NameFilter) ([]entity.Division, error) {
+	res, err := d.client.conn.Query(
+		ctx,
+		getDivisionsQuery,
+		as(filter.Name),
+		as(string(filter.Type)),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
 	}

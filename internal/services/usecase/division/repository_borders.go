@@ -7,7 +7,7 @@ import (
 )
 
 type IDivisionRepoReader interface {
-	GetDivisions(ctx context.Context) ([]entity.Division, error)
+	GetDivisionsByName(ctx context.Context, filter NameFilter) ([]entity.Division, error)
 }
 
 type IDivisionRepo interface {

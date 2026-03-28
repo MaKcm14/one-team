@@ -806,7 +806,3 @@ func (e employeeRepo) DeleteEmployee(ctx context.Context, employeeID int) (entit
 	}
 	return worker, nil
 }
-
-func as(str string) string {
-	return fmt.Sprintf("%%%s%%", str)
-}

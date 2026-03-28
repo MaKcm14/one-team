@@ -7,7 +7,7 @@ import (
 )
 
 type IDivisionServiceReader interface {
-	GetDivisions(ctx context.Context) ([]entity.Division, error)
+	GetDivisions(ctx context.Context, filters Filters) ([]entity.Division, error)
 }
 
 type IDivisionService interface {

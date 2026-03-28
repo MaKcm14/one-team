@@ -33,10 +33,24 @@ func (d DivisionRouter) HandlerGetDivisions(eCtx echo.Context) error {
 		Divisions []entity.Division `json:"divisions"`
 	}
 
+	pageNum, err := server.ValidatePageNum(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	filters, err := validateFilters(eCtx, pageNum)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	divisions, err := d.divisionService.GetDivisions(ctx)
+	divisions, err := d.divisionService.GetDivisions(ctx, filters)
 	if err != nil {
 		d.log.Error(fmt.Sprintf("Error of getting the titles: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{

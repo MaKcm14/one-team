@@ -1,6 +1,8 @@
 package postgres
 
 import (
+	"fmt"
+
 	"github.com/MaKcm14/one-team/internal/app/logger"
 	"github.com/MaKcm14/one-team/internal/config"
 )
@@ -30,6 +32,10 @@ func NewRepository(log logger.Logger, cfg config.DBConfig) (Repository, error) {
 			client: client,
 		},
 	}, nil
+}
+
+func as(str string) string {
+	return fmt.Sprintf("%%%s%%", str)
 }
 
 func (r Repository) Close() {
