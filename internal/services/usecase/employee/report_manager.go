@@ -15,7 +15,7 @@ type reportManager struct {
 }
 
 func (r reportManager) createDeletedEmployeeReport(worker entity.Employee) (string, error) {
-	const mainSheetName = "Deleted Employee common information"
+	const mainSheetName = "Employee Info"
 
 	r.report = excelize.NewFile()
 	defer r.report.Close()
@@ -34,7 +34,7 @@ func (r reportManager) createDeletedEmployeeReport(worker entity.Employee) (stri
 	}
 
 	go func() {
-		time.Sleep(30 * time.Minute)
+		time.Sleep(24 * time.Hour)
 		os.Remove(path)
 	}()
 	return path, nil

@@ -28,7 +28,7 @@ func (e Interactor) CreateEmployee(ctx context.Context, employee entity.Employee
 		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}
 
-	err = e.CreateEmployee(ctx, employee)
+	err = e.workerRepo.CreateEmployee(ctx, employee)
 	if err != nil {
 		retErr := fmt.Errorf("%w: %s", ErrRepoInteract, err)
 		if errors.Is(err, persistent.ErrCitizenshipNotFound) {
@@ -44,6 +44,9 @@ func (e Interactor) CreateEmployee(ctx context.Context, employee entity.Employee
 func (e Interactor) UpdateEmployee(ctx context.Context, employee entity.Employee) error {
 	err := e.workerRepo.UpdateEmployee(ctx, employee)
 	if err != nil {
+		if errors.Is(err, persistent.ErrEmployeeNotFound) {
+			return fmt.Errorf("%w: %s", ErrEmployeeNotFound, err)
+		}
 		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}
 	return nil

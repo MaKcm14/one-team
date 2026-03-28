@@ -82,7 +82,7 @@ func (e employeeRepo) IsEmployeeExists(ctx context.Context, worker entity.Employ
 	}
 	defer res.Close()
 
-	if res.Next() {
+	if !res.Next() {
 		return persistent.ErrQueryExec
 	}
 
@@ -143,7 +143,7 @@ func (e employeeRepo) CreateEmployee(ctx context.Context, worker entity.Employee
 }
 
 const updateEmployeeQuery = `
-UPDATE usecase.employee
+UPDATE usecase.employees
 SET tin_num=$1,
 	snils_num=$2, 
 	passport_data=$3, 
@@ -162,7 +162,7 @@ WHERE id=$15;
 `
 
 func (e employeeRepo) UpdateEmployee(ctx context.Context, worker entity.Employee) error {
-	_, err := e.client.conn.Exec(
+	res, err := e.client.conn.Exec(
 		ctx,
 		updateEmployeeQuery,
 		worker.TinNum,
@@ -183,6 +183,10 @@ func (e employeeRepo) UpdateEmployee(ctx context.Context, worker entity.Employee
 	)
 	if err != nil {
 		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrEmployeeNotFound
 	}
 	return nil
 }
@@ -732,7 +736,7 @@ FROM
 	usecase.citizenships
 	ON usecase.employees.citizenship_id=usecase.citizenships.id
 WHERE 
-	usecase.empoyees.id=$1;
+	usecase.employees.id=$1;
 `
 
 func (e employeeRepo) getEmployeeByID(ctx context.Context, employeeID int) (entity.Employee, error) {
@@ -787,7 +791,7 @@ func (e employeeRepo) getEmployeeByID(ctx context.Context, employeeID int) (enti
 
 const deleteEmployee = `
 DELETE FROM usecase.employees
-WHERE usecase.employees.id=$1;
+WHERE id=$1;
 `
 
 func (e employeeRepo) DeleteEmployee(ctx context.Context, employeeID int) (entity.Employee, error) {

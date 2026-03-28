@@ -136,6 +136,13 @@ func (e EmployeeRouter) HandlerUpdateEmployee(eCtx echo.Context) error {
 
 	err := e.workerService.UpdateEmployee(ctx, worker)
 	if err != nil {
+		if errors.Is(err, employee.ErrEmployeeNotFound) {
+			e.log.Warn(fmt.Sprintf("Warn of updating the unexisting employee: %s", err))
+			return eCtx.JSON(http.StatusNotFound, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: employee not found", server.ErrRequestInfo),
+			})
+		}
+
 		e.log.Error(fmt.Sprintf("Error of updating the employee: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 			Error: server.ErrHandleRequest.Error(),
@@ -266,13 +273,17 @@ func (e EmployeeRouter) HandlerDeleteEmployee(eCtx echo.Context) error {
 
 	path, err := e.workerService.DeleteEmployee(ctx, employeeID)
 	if err != nil {
+		code := http.StatusInternalServerError
+		retErr := server.ErrHandleRequest
+
 		if errors.Is(err, employee.ErrReportCreating) {
+			retErr = fmt.Errorf("%w: object was deleted (OK) but the report wasn't created", server.ErrHandleRequest)
 			e.log.Error(fmt.Sprintf("Error of creating the report for deleted employee: %s", err))
 		} else {
 			e.log.Error(fmt.Sprintf("Error of deleting the employee: %s", err))
 		}
-		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
+		return eCtx.JSON(code, server.ErrorResponse{
+			Error: retErr.Error(),
 		})
 	}
 	eCtx.Response().Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
