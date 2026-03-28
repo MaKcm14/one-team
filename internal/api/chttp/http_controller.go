@@ -110,5 +110,7 @@ func (c Controller) configEndpoints() {
 	divisionGroup := c.e.Group("/division")
 	{
 		divisionGroup.GET("/get/list", c.divisionRouter.HandlerGetDivisions)
+
+		divisionGroup.POST("/create", c.divisionRouter.HandlerCreateDivision)
 	}
 }

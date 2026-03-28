@@ -10,6 +10,11 @@ type IDivisionServiceReader interface {
 	GetDivisions(ctx context.Context, filters Filters) ([]entity.Division, error)
 }
 
+type IDivisionServiceWriter interface {
+	CreateDivision(ctx context.Context, div entity.Division) error
+}
+
 type IDivisionService interface {
 	IDivisionServiceReader
+	IDivisionServiceWriter
 }
