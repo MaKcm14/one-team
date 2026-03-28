@@ -38,7 +38,7 @@ func genOpaqueToken(size int) string {
 
 func genRandSlice(slice []byte) {
 	for i := 0; i != len(slice); i++ {
-		num, caseForm := rand.Intn(15), rand.Intn(1)
+		num, caseForm := rand.Intn(15), rand.Intn(2)
 
 		if caseForm == 0 {
 			slice[i] = []byte(fmt.Sprintf("%x", num))[0]
@@ -57,9 +57,5 @@ func (r RefreshToken) CheckRefreshToken(origHashedToken string, token string) er
 }
 
 func (r RefreshToken) HashRefreshToken(token string) ([]byte, error) {
-	salt := r.cfg.TokenSalt
-	if r.cfg.TokenSalt > 31 {
-		salt = r.cfg.TokenSalt%29 + 4
-	}
-	return bcrypt.GenerateFromPassword([]byte(token), salt)
+	return bcrypt.GenerateFromPassword([]byte(token), bcrypt.DefaultCost)
 }

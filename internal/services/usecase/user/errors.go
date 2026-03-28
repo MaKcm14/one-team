@@ -12,6 +12,6 @@ var (
 	ErrRoleNotFound      = errors.New("user: error of searching the role: not found")
 	ErrSignUp            = errors.New("user: error of sign-up the user")
 	ErrVerifyPassword    = errors.New("user: error of the password's verification")
-	ErrPasswordLength    = errors.New("user: error of the password's length: must be more or equal than 9 symbols")
+	ErrPasswordLength    = errors.New("user: error of the password's length: must be more or equal than 9 symbols and less than 17")
 	ErrPasswordSymbols   = errors.New("user: error of the password's symbols: the password doesn't contain at least 2 required symbols")
 )

@@ -7,6 +7,8 @@ import (
 
 type Repository struct {
 	userRepo
+	employeeRepo
+	divisionRepo
 
 	client *postgresClient
 }
@@ -19,6 +21,12 @@ func NewRepository(log logger.Logger, cfg config.DBConfig) (Repository, error) {
 	return Repository{
 		client: client,
 		userRepo: userRepo{
+			client: client,
+		},
+		employeeRepo: employeeRepo{
+			client: client,
+		},
+		divisionRepo: divisionRepo{
 			client: client,
 		},
 	}, nil

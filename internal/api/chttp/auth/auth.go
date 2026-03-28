@@ -10,13 +10,10 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/MaKcm14/one-team/internal/api/chttp/auth/token"
+	"github.com/MaKcm14/one-team/internal/api/chttp/server"
 	"github.com/MaKcm14/one-team/internal/config"
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
-
-type errorResponse struct {
-	Error string `json:"error"`
-}
 
 type Authenticator struct {
 	log         *slog.Logger
@@ -27,9 +24,10 @@ type Authenticator struct {
 	authService user.IAuthService
 }
 
-func NewMW(
+func NewAuthenticator(
 	log *slog.Logger,
 	cfg config.AuthConfig,
+	session SessionConfig,
 	authService user.IAuthService,
 ) Authenticator {
 	return Authenticator{
@@ -38,7 +36,7 @@ func NewMW(
 		refToken:    token.NewRefreshToken(cfg),
 		authService: authService,
 		tokens:      token.NewTokenStorage(),
-		session:     NewSessionConfig(cfg),
+		session:     session,
 	}
 }
 
@@ -50,7 +48,7 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 			authHeader := ctx.Request().Header.Get("Authorization")
 			if !strings.HasPrefix(authHeader, bearerAuth) {
 				a.log.Warn(fmt.Sprintf("Warn of parsing the 'Authorization' header while verify access-token"))
-				return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 					Error: ErrAccessTokenNotValid.Error(),
 				})
 			}
@@ -58,22 +56,22 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 			sessionID, err := ExtractSessionIDFromCtx(ctx)
 			if err != nil {
 				a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
-				return ctx.JSON(http.StatusBadRequest, errorResponse{
-					ErrRequestInfo.Error(),
+				return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
+					Error: server.ErrRequestInfo.Error(),
 				})
 			}
 
 			_, expAt, ok := a.tokens.AccessTokens.GetWithExpiration(sessionID)
 			if !ok || expAt.Before(time.Now()) {
 				a.log.Warn(fmt.Sprintf("Warn of checking the token: it's expired"))
-				return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 					Error: ErrAccessTokenNotValid.Error(),
 				})
 			}
 
 			claims, err := a.acToken.VerifyAccessToken(authHeader[len(bearerAuth):])
 			if err != nil {
-				return ctx.JSON(http.StatusUnauthorized, errorResponse{
+				return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 					Error: ErrAccessTokenNotValid.Error(),
 				})
 			}

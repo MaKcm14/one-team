@@ -8,11 +8,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (auth Interactor) checkPassword(origHashPwd string, password string) error {
+func (auth Interactor) checkPassword(origHashPwd string, password string, salt int) error {
 	return bcrypt.CompareHashAndPassword(
 		[]byte(origHashPwd),
 		[]byte(
-			fmt.Sprintf("%s%d", password, auth.cfg.GlobalPwdSalt),
+			fmt.Sprintf("%d%s%d", salt, password, auth.cfg.GlobalPwdSalt),
 		),
 	)
 }
@@ -20,18 +20,14 @@ func (auth Interactor) checkPassword(origHashPwd string, password string) error 
 func (auth Interactor) hashPassword(pwd string, userSalt int) ([]byte, error) {
 	return bcrypt.GenerateFromPassword(
 		[]byte(
-			fmt.Sprintf("%s%d", pwd, auth.cfg.GlobalPwdSalt),
+			fmt.Sprintf("%d%s%d", userSalt, pwd, auth.cfg.GlobalPwdSalt),
 		),
-		userSalt,
+		bcrypt.DefaultCost,
 	)
 }
 
 func (auth Interactor) generateSalt() int {
-	salt := 0
-	for salt < 4 {
-		salt = rand.Intn(31)
-	}
-	return salt
+	return rand.Intn(auth.cfg.GlobalPwdSalt)
 }
 
 func (auth Interactor) verifyPassword(pwd string) error {
@@ -44,7 +40,7 @@ func (auth Interactor) verifyPassword(pwd string) error {
 		"$": {},
 	}
 
-	if len(pwd) < 9 {
+	if len(pwd) < 9 || len(pwd) > 16 {
 		return fmt.Errorf("%w: %w", user.ErrVerifyPassword, user.ErrPasswordLength)
 	}
 

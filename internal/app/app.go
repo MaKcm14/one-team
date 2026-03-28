@@ -7,6 +7,8 @@ import (
 	"github.com/MaKcm14/one-team/internal/app/logger"
 	"github.com/MaKcm14/one-team/internal/config"
 	"github.com/MaKcm14/one-team/internal/repository/persistent/postgres"
+	"github.com/MaKcm14/one-team/internal/services/usecase/division"
+	"github.com/MaKcm14/one-team/internal/services/usecase/employee"
 	"github.com/MaKcm14/one-team/internal/services/usecase/user/auth"
 )
 
@@ -41,6 +43,8 @@ func New() App {
 			log.Instance(),
 			cfg.ControllerCfg,
 			auth.NewInteractor(log, cfg.ControllerCfg.AuthCfg, repo),
+			employee.NewInteractor(repo),
+			division.NewInteractor(repo),
 		),
 		repo: repo,
 	}
