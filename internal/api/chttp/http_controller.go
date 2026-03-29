@@ -119,6 +119,8 @@ func (c Controller) configEndpoints() {
 	{
 		divisionGroup.GET("/get/list", c.divisionRouter.HandlerGetDivisions)
 
+		divisionGroup.GET("/statistics/salary", c.divisionRouter.HandlerGetSalaryStatisticsOfDivision)
+
 		divisionGroup.POST("/create", c.divisionRouter.HandlerCreateDivision)
 
 		divisionGroup.PUT("/update", c.divisionRouter.HandlerUpdateDivision)

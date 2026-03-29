@@ -112,3 +112,11 @@ func (d Interactor) UpdateDivision(ctx context.Context, div entity.Division) err
 	}
 	return nil
 }
+
+func (d Interactor) GetSalaryStatisticsOfDivision(ctx context.Context, id int) (SalaryStatistics, error) {
+	stats, err := d.divisionRepo.GetSalaryStatisticsOfDivision(ctx, id)
+	if err != nil {
+		return SalaryStatistics{}, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return stats, nil
+}

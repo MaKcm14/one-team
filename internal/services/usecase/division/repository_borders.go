@@ -13,6 +13,7 @@ type IDivisionRepoReader interface {
 	IsDivisionExistsByName(ctx context.Context, div entity.Division) error
 	IsDivisionExistsByID(ctx context.Context, id int) error
 	IsDivisionEmpty(ctx context.Context, id int) error
+	GetSalaryStatisticsOfDivision(ctx context.Context, id int) (SalaryStatistics, error)
 }
 
 type IDivisionRepoWriter interface {

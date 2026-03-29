@@ -324,3 +324,28 @@ func (d divisionRepo) IsDivisionExistsByID(ctx context.Context, id int) error {
 	}
 	return nil
 }
+
+const getSalaryStatisticsOfDivision = `
+SELECT COALESCE(MAX(salary), 0), COALESCE(MIN(salary), 0), COALESCE(AVG(salary), 0)
+FROM usecase.employees
+WHERE unit_id=$1;
+`
+
+func (d divisionRepo) GetSalaryStatisticsOfDivision(ctx context.Context, id int) (division.SalaryStatistics, error) {
+	res, err := d.client.conn.Query(ctx, getSalaryStatisticsOfDivision, id)
+	if err != nil {
+		return division.SalaryStatistics{}, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return division.SalaryStatistics{}, persistent.ErrQueryExec
+	}
+
+	var stats division.SalaryStatistics
+	err = res.Scan(&stats.Max, &stats.Min, &stats.Average)
+	if err != nil {
+		return division.SalaryStatistics{}, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	return stats, nil
+}
