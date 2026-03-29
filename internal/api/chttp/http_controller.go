@@ -120,6 +120,7 @@ func (c Controller) configEndpoints() {
 		divisionGroup.GET("/get/list", c.divisionRouter.HandlerGetDivisions)
 
 		divisionGroup.GET("/statistics/salary", c.divisionRouter.HandlerGetSalaryStatisticsOfDivision)
+		divisionGroup.GET("/statistics/statesize", c.divisionRouter.HandlerGetStateSizeStatisticsOfDivisions)
 
 		divisionGroup.POST("/create", c.divisionRouter.HandlerCreateDivision)
 

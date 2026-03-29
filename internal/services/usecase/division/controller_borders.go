@@ -9,6 +9,7 @@ import (
 type IDivisionServiceReader interface {
 	GetDivisions(ctx context.Context, filters Filters) ([]entity.Division, error)
 	GetSalaryStatisticsOfDivision(ctx context.Context, id int) (SalaryStatistics, error)
+	GetStateSizeStatisticsOfDivisions(ctx context.Context, divType entity.DivisionType) (StateSizeStatistics, error)
 }
 
 type IDivisionServiceWriter interface {

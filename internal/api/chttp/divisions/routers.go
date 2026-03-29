@@ -220,3 +220,30 @@ func (d DivisionRouter) HandlerGetSalaryStatisticsOfDivision(eCtx echo.Context) 
 		SalaryStats: stats,
 	})
 }
+
+func (d DivisionRouter) HandlerGetStateSizeStatisticsOfDivisions(eCtx echo.Context) error {
+	type response struct {
+		StateSizeStats division.StateSizeStatistics `json:"state_size_statistics"`
+	}
+
+	divType, err := validateDivisionType(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	stats, err := d.divisionService.GetStateSizeStatisticsOfDivisions(ctx, divType)
+	if err != nil {
+		d.log.Error(fmt.Sprintf("Error of getting the state size stats: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.JSON(http.StatusOK, response{
+		StateSizeStats: stats,
+	})
+}

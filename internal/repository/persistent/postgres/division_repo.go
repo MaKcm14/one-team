@@ -349,3 +349,89 @@ func (d divisionRepo) GetSalaryStatisticsOfDivision(ctx context.Context, id int)
 	}
 	return stats, nil
 }
+
+const getMaxStateSizeDivisionsQuery = `
+SELECT id, name, type, state_size, superdivision_id
+FROM usecase.divisions
+WHERE state_size=(
+	SELECT MAX(state_size) 
+	FROM usecase.divisions
+	WHERE type=$1
+) AND type=$2;
+`
+
+func (d divisionRepo) GetMaxStateSizeDivisions(
+	ctx context.Context,
+	divType entity.DivisionType,
+) ([]entity.Division, error) {
+	res, err := d.client.conn.Query(ctx, getMaxStateSizeDivisionsQuery, divType, divType)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	list := make([]entity.Division, 0, 100)
+	for res.Next() {
+		var (
+			div             entity.Division
+			superdivisionID sql.NullInt64
+		)
+		err := res.Scan(
+			&div.ID,
+			&div.Name,
+			&div.Type,
+			&div.StateSize,
+			&superdivisionID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+		}
+		div.SuperdivisionID = int(superdivisionID.Int64)
+
+		list = append(list, div)
+	}
+	return list, nil
+}
+
+const getMinStateSizeDivisionsQuery = `
+SELECT id, name, type, state_size, superdivision_id
+FROM usecase.divisions
+WHERE state_size=(
+	SELECT MIN(state_size) 
+	FROM usecase.divisions
+	WHERE type=$1
+) AND type=$2;
+`
+
+func (d divisionRepo) GetMinStateSizeDivisions(
+	ctx context.Context,
+	divType entity.DivisionType,
+) ([]entity.Division, error) {
+	res, err := d.client.conn.Query(ctx, getMinStateSizeDivisionsQuery, divType, divType)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	list := make([]entity.Division, 0, 100)
+	for res.Next() {
+		var (
+			div             entity.Division
+			superdivisionID sql.NullInt64
+		)
+		err := res.Scan(
+			&div.ID,
+			&div.Name,
+			&div.Type,
+			&div.StateSize,
+			&superdivisionID,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+		}
+		div.SuperdivisionID = int(superdivisionID.Int64)
+
+		list = append(list, div)
+	}
+	return list, nil
+}

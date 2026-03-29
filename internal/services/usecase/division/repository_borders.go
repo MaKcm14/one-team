@@ -14,6 +14,8 @@ type IDivisionRepoReader interface {
 	IsDivisionExistsByID(ctx context.Context, id int) error
 	IsDivisionEmpty(ctx context.Context, id int) error
 	GetSalaryStatisticsOfDivision(ctx context.Context, id int) (SalaryStatistics, error)
+	GetMinStateSizeDivisions(ctx context.Context, divType entity.DivisionType) ([]entity.Division, error)
+	GetMaxStateSizeDivisions(ctx context.Context, divType entity.DivisionType) ([]entity.Division, error)
 }
 
 type IDivisionRepoWriter interface {

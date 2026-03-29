@@ -120,3 +120,22 @@ func (d Interactor) GetSalaryStatisticsOfDivision(ctx context.Context, id int) (
 	}
 	return stats, nil
 }
+
+func (d Interactor) GetStateSizeStatisticsOfDivisions(
+	ctx context.Context,
+	divType entity.DivisionType,
+) (StateSizeStatistics, error) {
+	minList, err := d.divisionRepo.GetMinStateSizeDivisions(ctx, divType)
+	if err != nil {
+		return StateSizeStatistics{}, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	maxList, err := d.divisionRepo.GetMaxStateSizeDivisions(ctx, divType)
+	if err != nil {
+		return StateSizeStatistics{}, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return StateSizeStatistics{
+		MinStateSizeDivList: minList,
+		MaxStateSizeDivList: maxList,
+	}, nil
+}

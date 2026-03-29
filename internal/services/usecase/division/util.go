@@ -1,6 +1,8 @@
 package division
 
-import entity "github.com/MaKcm14/one-team/internal/entity/division"
+import (
+	entity "github.com/MaKcm14/one-team/internal/entity/division"
+)
 
 const (
 	// FilterTypes.
@@ -23,4 +25,9 @@ type SalaryStatistics struct {
 	Average float64 `json:"avg"`
 	Max     float64 `json:"max"`
 	Min     float64 `json:"min"`
+}
+
+type StateSizeStatistics struct {
+	MinStateSizeDivList []entity.Division `json:"min_state_size_divisions"`
+	MaxStateSizeDivList []entity.Division `json:"max_state_size_divisions"`
 }

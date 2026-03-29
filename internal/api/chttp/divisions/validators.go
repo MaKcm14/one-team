@@ -11,8 +11,21 @@ import (
 )
 
 const (
-	divisionIDQueryParamKey = "division_id"
+	divisionIDQueryParamKey   = "division_id"
+	divisionTypeQueryParamKey = "division_type"
 )
+
+func validateDivisionType(ctx echo.Context) (entity.DivisionType, error) {
+	val := ctx.QueryParam(divisionTypeQueryParamKey)
+	if len(val) == 0 {
+		return "", fmt.Errorf("parameter '%s' can't be empty", divisionTypeQueryParamKey)
+	}
+
+	if !entity.IsDivisionTypeValid(entity.DivisionType(val)) {
+		return "", fmt.Errorf("unknown division type was got")
+	}
+	return entity.DivisionType(val), nil
+}
 
 func validateDivision(div entity.Division) error {
 	if !entity.IsDivisionTypeValid(div.Type) {
