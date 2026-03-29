@@ -229,7 +229,7 @@ func (e EmployeeRouter) HandlerGetEmployeeWithFilter(eCtx echo.Context) error {
 		Employees []entity.Employee `json:"employees"`
 	}
 
-	pageNum, err := validatePageNum(eCtx)
+	pageNum, err := server.ValidatePageNum(eCtx)
 	if err != nil {
 		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
 			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),

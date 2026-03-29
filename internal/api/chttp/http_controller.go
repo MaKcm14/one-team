@@ -3,6 +3,7 @@ package chttp
 import (
 	"fmt"
 	"log/slog"
+	"net/http"
 
 	"github.com/labstack/echo/v4"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/MaKcm14/one-team/internal/api/chttp/divisions"
 	"github.com/MaKcm14/one-team/internal/api/chttp/employees"
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw"
+	"github.com/MaKcm14/one-team/internal/api/chttp/server"
 	"github.com/MaKcm14/one-team/internal/config"
 	"github.com/MaKcm14/one-team/internal/services/usecase/division"
 	"github.com/MaKcm14/one-team/internal/services/usecase/employee"
@@ -76,6 +78,12 @@ func (c Controller) configEndpoints() {
 		c.auth.DebugPrintCaches(),
 	)
 
+	c.e.RouteNotFound("/*", func(ctx echo.Context) error {
+		return ctx.JSON(http.StatusNotFound, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: the endpoint is not supported", server.ErrRequestInfo),
+		})
+	})
+
 	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW())
 	{
 		adminGroup.POST("/signup", c.auth.HandlerSignUp)
@@ -110,5 +118,13 @@ func (c Controller) configEndpoints() {
 	divisionGroup := c.e.Group("/division")
 	{
 		divisionGroup.GET("/get/list", c.divisionRouter.HandlerGetDivisions)
+
+		divisionGroup.GET("/statistics/salary", c.divisionRouter.HandlerGetSalaryStatisticsOfDivision)
+		divisionGroup.GET("/statistics/statesize", c.divisionRouter.HandlerGetStateSizeStatisticsOfDivisions)
+
+		divisionGroup.POST("/create", c.divisionRouter.HandlerCreateDivision)
+
+		divisionGroup.PUT("/update", c.divisionRouter.HandlerUpdateDivision)
+		divisionGroup.DELETE("/delete", c.divisionRouter.HandlerDeleteDivision)
 	}
 }

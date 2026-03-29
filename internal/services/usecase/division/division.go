@@ -2,9 +2,11 @@ package division
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	entity "github.com/MaKcm14/one-team/internal/entity/division"
+	"github.com/MaKcm14/one-team/internal/repository/persistent"
 )
 
 type Interactor struct {
@@ -17,10 +19,123 @@ func NewInteractor(divisionRepo IDivisionRepo) Interactor {
 	}
 }
 
-func (d Interactor) GetDivisions(ctx context.Context) ([]entity.Division, error) {
-	divisions, err := d.divisionRepo.GetDivisions(ctx)
+func (d Interactor) GetDivisions(ctx context.Context, filter Filters) ([]entity.Division, error) {
+	divisions, err := d.divisionRepo.GetDivisionsByName(ctx, filter.Names)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}
 	return divisions, nil
+}
+
+func (d Interactor) CreateDivision(ctx context.Context, div entity.Division) error {
+	err := d.divisionRepo.IsDivisionExistsByName(ctx, div)
+	if err == nil {
+		return ErrDivisionExists
+	} else if !errors.Is(err, persistent.ErrDivisionNotFound) {
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	if div.Type == entity.DivisionTypeName {
+		err = d.divisionRepo.CreateDivisionOfDivisionType(ctx, div)
+	} else {
+		var supDiv entity.Division
+
+		supDiv, err = d.divisionRepo.GetDivisionByID(ctx, div.SuperdivisionID)
+		if err != nil {
+			if errors.Is(err, persistent.ErrDivisionNotFound) {
+				return fmt.Errorf("superdivision search process: %w: %s", ErrDivisionNotFound, err)
+			}
+			return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+		}
+
+		if !entity.IsDivisionTypeRelationCorrect(div.Type, supDiv.Type) {
+			return ErrWrongDivisionsRelation
+		}
+		err = d.divisionRepo.CreateDivisionOfNotDivisionType(ctx, div)
+	}
+
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
+}
+
+func (d Interactor) DeleteDivision(ctx context.Context, id int) error {
+	err := d.divisionRepo.IsDivisionEmpty(ctx, id)
+	if err != nil {
+		if errors.Is(err, persistent.ErrDivisionNotEmpty) {
+			return ErrDivisionNotEmpty
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	err = d.divisionRepo.CheckDivisionIsSuperdivision(ctx, id)
+	if err != nil && !errors.Is(err, persistent.ErrDivisionNotSuperdivision) {
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	} else if err == nil {
+		return ErrDivisionIsSuperdivision
+	}
+
+	err = d.divisionRepo.DeleteDivisionByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, persistent.ErrDivisionNotFound) {
+			return ErrDivisionNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
+}
+
+func (d Interactor) UpdateDivision(ctx context.Context, div entity.Division) error {
+	if div.Type != entity.DivisionTypeName {
+		err := d.divisionRepo.IsDivisionExistsByID(ctx, div.SuperdivisionID)
+		if err != nil {
+			if errors.Is(err, persistent.ErrDivisionNotFound) {
+				return ErrSuperdivisionNotFound
+			}
+			return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+		}
+	}
+
+	var err error
+	if div.Type == entity.DivisionTypeName {
+		err = d.divisionRepo.UpdateDivisionOfDivisionType(ctx, div)
+	} else {
+		err = d.divisionRepo.UpdateDivisionOfNotDivisionType(ctx, div)
+	}
+
+	if err != nil {
+		if errors.Is(err, persistent.ErrDivisionNotFound) {
+			return ErrDivisionNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
+}
+
+func (d Interactor) GetSalaryStatisticsOfDivision(ctx context.Context, id int) (SalaryStatistics, error) {
+	stats, err := d.divisionRepo.GetSalaryStatisticsOfDivision(ctx, id)
+	if err != nil {
+		return SalaryStatistics{}, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return stats, nil
+}
+
+func (d Interactor) GetStateSizeStatisticsOfDivisions(
+	ctx context.Context,
+	divType entity.DivisionType,
+) (StateSizeStatistics, error) {
+	minList, err := d.divisionRepo.GetMinStateSizeDivisions(ctx, divType)
+	if err != nil {
+		return StateSizeStatistics{}, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	maxList, err := d.divisionRepo.GetMaxStateSizeDivisions(ctx, divType)
+	if err != nil {
+		return StateSizeStatistics{}, fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return StateSizeStatistics{
+		MinStateSizeDivList: minList,
+		MaxStateSizeDivList: maxList,
+	}, nil
 }

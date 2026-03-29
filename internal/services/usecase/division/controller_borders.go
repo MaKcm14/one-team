@@ -7,9 +7,18 @@ import (
 )
 
 type IDivisionServiceReader interface {
-	GetDivisions(ctx context.Context) ([]entity.Division, error)
+	GetDivisions(ctx context.Context, filters Filters) ([]entity.Division, error)
+	GetSalaryStatisticsOfDivision(ctx context.Context, id int) (SalaryStatistics, error)
+	GetStateSizeStatisticsOfDivisions(ctx context.Context, divType entity.DivisionType) (StateSizeStatistics, error)
+}
+
+type IDivisionServiceWriter interface {
+	CreateDivision(ctx context.Context, div entity.Division) error
+	DeleteDivision(ctx context.Context, id int) error
+	UpdateDivision(ctx context.Context, div entity.Division) error
 }
 
 type IDivisionService interface {
 	IDivisionServiceReader
+	IDivisionServiceWriter
 }
