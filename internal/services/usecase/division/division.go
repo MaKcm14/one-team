@@ -59,3 +59,14 @@ func (d Interactor) CreateDivision(ctx context.Context, div entity.Division) err
 	}
 	return nil
 }
+
+func (d Interactor) DeleteDivision(ctx context.Context, id int) error {
+	err := d.divisionRepo.DeleteDivisionByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, persistent.ErrDivisionNotFound) {
+			return ErrDivisionNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
+}

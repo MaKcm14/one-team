@@ -12,6 +12,7 @@ type IDivisionServiceReader interface {
 
 type IDivisionServiceWriter interface {
 	CreateDivision(ctx context.Context, div entity.Division) error
+	DeleteDivision(ctx context.Context, id int) error
 }
 
 type IDivisionService interface {

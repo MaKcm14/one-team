@@ -15,6 +15,7 @@ type IDivisionRepoReader interface {
 type IDivisionRepoWriter interface {
 	CreateDivisionOfDivisionType(ctx context.Context, div entity.Division) error
 	CreateDivisionOfNotDivisionType(ctx context.Context, div entity.Division) error
+	DeleteDivisionByID(ctx context.Context, id int) error
 }
 
 type IDivisionRepo interface {

@@ -111,3 +111,30 @@ func (d DivisionRouter) HandlerCreateDivision(eCtx echo.Context) error {
 	}
 	return eCtx.NoContent(http.StatusCreated)
 }
+
+func (d DivisionRouter) HandlerDeleteDivision(eCtx echo.Context) error {
+	id, err := validateDivisionID(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	err = d.divisionService.DeleteDivision(ctx, id)
+	if err != nil {
+		if errors.Is(err, division.ErrDivisionNotFound) {
+			d.log.Warn("Warn of deleting the unexisting division")
+			return eCtx.JSON(http.StatusNotFound, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: the division doesn't exist", server.ErrRequestInfo),
+			})
+		}
+		d.log.Error(fmt.Sprintf("Error of deleting the division: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.NoContent(http.StatusOK)
+}

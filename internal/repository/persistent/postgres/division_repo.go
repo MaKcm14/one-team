@@ -166,3 +166,20 @@ func (d divisionRepo) GetDivisionByID(ctx context.Context, id int) (entity.Divis
 
 	return div, nil
 }
+
+const deleteDivisionByIDQuery = `
+DELETE FROM usecase.divisions
+WHERE id=$1;
+`
+
+func (d divisionRepo) DeleteDivisionByID(ctx context.Context, id int) error {
+	res, err := d.client.conn.Exec(ctx, deleteDivisionByIDQuery, id)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrDivisionNotFound
+	}
+	return nil
+}
