@@ -61,7 +61,22 @@ func (d Interactor) CreateDivision(ctx context.Context, div entity.Division) err
 }
 
 func (d Interactor) DeleteDivision(ctx context.Context, id int) error {
-	err := d.divisionRepo.DeleteDivisionByID(ctx, id)
+	err := d.divisionRepo.IsDivisionEmpty(ctx, id)
+	if err != nil {
+		if errors.Is(err, persistent.ErrDivisionNotEmpty) {
+			return ErrDivisionNotEmpty
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	err = d.divisionRepo.CheckDivisionIsSuperdivision(ctx, id)
+	if err != nil && !errors.Is(err, persistent.ErrDivisionNotSuperdivision) {
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	} else if err == nil {
+		return ErrDivisionIsSuperdivision
+	}
+
+	err = d.divisionRepo.DeleteDivisionByID(ctx, id)
 	if err != nil {
 		if errors.Is(err, persistent.ErrDivisionNotFound) {
 			return ErrDivisionNotFound

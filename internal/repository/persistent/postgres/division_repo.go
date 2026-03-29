@@ -183,3 +183,59 @@ func (d divisionRepo) DeleteDivisionByID(ctx context.Context, id int) error {
 	}
 	return nil
 }
+
+const isDivisionEmptyQuery = `
+SELECT COUNT(*)
+FROM usecase.employees
+WHERE unit_id=$1;
+`
+
+func (d divisionRepo) IsDivisionEmpty(ctx context.Context, id int) error {
+	res, err := d.client.conn.Query(ctx, isDivisionEmptyQuery, id)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return persistent.ErrQueryExec
+	}
+
+	var count int
+	if err := res.Scan(&count); err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if count != 0 {
+		return persistent.ErrDivisionNotEmpty
+	}
+	return nil
+}
+
+const checkDivisionIsSuperdivisionQuery = `
+SELECT COUNT(*)
+FROM usecase.divisions
+WHERE superdivision_id=$1;
+`
+
+func (d divisionRepo) CheckDivisionIsSuperdivision(ctx context.Context, id int) error {
+	res, err := d.client.conn.Query(ctx, checkDivisionIsSuperdivisionQuery, id)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return persistent.ErrQueryExec
+	}
+
+	var count int
+	if err := res.Scan(&count); err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if count == 0 {
+		return persistent.ErrDivisionNotSuperdivision
+	}
+	return nil
+}

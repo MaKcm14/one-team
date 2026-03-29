@@ -7,9 +7,11 @@ import (
 )
 
 type IDivisionRepoReader interface {
+	CheckDivisionIsSuperdivision(ctx context.Context, id int) error
 	GetDivisionsByName(ctx context.Context, filter NameFilter) ([]entity.Division, error)
 	GetDivisionByID(ctx context.Context, id int) (entity.Division, error)
 	IsDivisionExists(ctx context.Context, div entity.Division) error
+	IsDivisionEmpty(ctx context.Context, id int) error
 }
 
 type IDivisionRepoWriter interface {

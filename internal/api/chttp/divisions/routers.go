@@ -128,9 +128,22 @@ func (d DivisionRouter) HandlerDeleteDivision(eCtx echo.Context) error {
 		if errors.Is(err, division.ErrDivisionNotFound) {
 			d.log.Warn("Warn of deleting the unexisting division")
 			return eCtx.JSON(http.StatusNotFound, server.ErrorResponse{
-				Error: fmt.Sprintf("%s: the division doesn't exist", server.ErrRequestInfo),
+				Error: fmt.Sprintf("%s: the division doesn't exist", ErrDivisionDeleting),
+			})
+
+		} else if errors.Is(err, division.ErrDivisionNotEmpty) {
+			d.log.Warn("Warn of deleting the division with employees")
+			return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: the division has employees", ErrDivisionDeleting),
+			})
+
+		} else if errors.Is(err, division.ErrDivisionIsSuperdivision) {
+			d.log.Warn("Warn of deleting the division that has sub-divisions")
+			return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: the division is superdivision for some divisions", ErrDivisionDeleting),
 			})
 		}
+
 		d.log.Error(fmt.Sprintf("Error of deleting the division: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 			Error: server.ErrHandleRequest.Error(),
