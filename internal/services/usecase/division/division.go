@@ -28,7 +28,7 @@ func (d Interactor) GetDivisions(ctx context.Context, filter Filters) ([]entity.
 }
 
 func (d Interactor) CreateDivision(ctx context.Context, div entity.Division) error {
-	err := d.divisionRepo.IsDivisionExists(ctx, div)
+	err := d.divisionRepo.IsDivisionExistsByName(ctx, div)
 	if err == nil {
 		return ErrDivisionExists
 	} else if !errors.Is(err, persistent.ErrDivisionNotFound) {
@@ -77,6 +77,33 @@ func (d Interactor) DeleteDivision(ctx context.Context, id int) error {
 	}
 
 	err = d.divisionRepo.DeleteDivisionByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, persistent.ErrDivisionNotFound) {
+			return ErrDivisionNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
+}
+
+func (d Interactor) UpdateDivision(ctx context.Context, div entity.Division) error {
+	if div.Type != entity.DivisionTypeName {
+		err := d.divisionRepo.IsDivisionExistsByID(ctx, div.SuperdivisionID)
+		if err != nil {
+			if errors.Is(err, persistent.ErrDivisionNotFound) {
+				return ErrSuperdivisionNotFound
+			}
+			return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+		}
+	}
+
+	var err error
+	if div.Type == entity.DivisionTypeName {
+		err = d.divisionRepo.UpdateDivisionOfDivisionType(ctx, div)
+	} else {
+		err = d.divisionRepo.UpdateDivisionOfNotDivisionType(ctx, div)
+	}
+
 	if err != nil {
 		if errors.Is(err, persistent.ErrDivisionNotFound) {
 			return ErrDivisionNotFound

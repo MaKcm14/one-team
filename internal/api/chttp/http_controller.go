@@ -121,6 +121,7 @@ func (c Controller) configEndpoints() {
 
 		divisionGroup.POST("/create", c.divisionRouter.HandlerCreateDivision)
 
+		divisionGroup.PUT("/update", c.divisionRouter.HandlerUpdateDivision)
 		divisionGroup.DELETE("/delete", c.divisionRouter.HandlerDeleteDivision)
 	}
 }

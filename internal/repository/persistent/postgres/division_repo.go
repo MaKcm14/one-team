@@ -55,16 +55,16 @@ func (d divisionRepo) GetDivisionsByName(ctx context.Context, filter division.Na
 	return divisions, nil
 }
 
-const isDivisionExistsQuery = `
+const isDivisionExistsByNameQuery = `
 SELECT COUNT(*)
 FROM usecase.divisions
 WHERE name=$1 AND type=$2;
 `
 
-func (d divisionRepo) IsDivisionExists(ctx context.Context, div entity.Division) error {
+func (d divisionRepo) IsDivisionExistsByName(ctx context.Context, div entity.Division) error {
 	res, err := d.client.conn.Query(
 		ctx,
-		isDivisionExistsQuery,
+		isDivisionExistsByNameQuery,
 		div.Name,
 		div.Type,
 	)
@@ -236,6 +236,91 @@ func (d divisionRepo) CheckDivisionIsSuperdivision(ctx context.Context, id int) 
 
 	if count == 0 {
 		return persistent.ErrDivisionNotSuperdivision
+	}
+	return nil
+}
+
+const updateDivisionOfNotDivisionTypeQuery = `
+UPDATE usecase.divisions
+SET name=$1,
+	type=$2,
+	state_size=$3,
+	superdivision_id=$4
+WHERE id=$5;
+`
+
+func (d divisionRepo) UpdateDivisionOfNotDivisionType(ctx context.Context, div entity.Division) error {
+	res, err := d.client.conn.Exec(
+		ctx,
+		updateDivisionOfNotDivisionTypeQuery,
+		div.Name,
+		div.Type,
+		div.StateSize,
+		div.SuperdivisionID,
+		div.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrDivisionNotFound
+	}
+	return nil
+}
+
+const updateDivisionOfDivisionTypeQuery = `
+UPDATE usecase.divisions
+SET name=$1,
+	type=$2,
+	state_size=$3,
+	superdivision_id=NULL
+WHERE id=$4;
+`
+
+func (d divisionRepo) UpdateDivisionOfDivisionType(ctx context.Context, div entity.Division) error {
+	res, err := d.client.conn.Exec(
+		ctx,
+		updateDivisionOfDivisionTypeQuery,
+		div.Name,
+		div.Type,
+		div.StateSize,
+		div.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrDivisionNotFound
+	}
+	return nil
+}
+
+const isDivisionExistsByIDQuery = `
+SELECT COUNT(*)
+FROM usecase.divisions
+WHERE id=$1;
+`
+
+func (d divisionRepo) IsDivisionExistsByID(ctx context.Context, id int) error {
+	res, err := d.client.conn.Query(ctx, isDivisionExistsByIDQuery, id)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return persistent.ErrQueryExec
+	}
+
+	var count int
+	if err := res.Scan(&count); err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if count == 0 {
+		return persistent.ErrDivisionNotFound
 	}
 	return nil
 }

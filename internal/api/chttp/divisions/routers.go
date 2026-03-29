@@ -151,3 +151,45 @@ func (d DivisionRouter) HandlerDeleteDivision(eCtx echo.Context) error {
 	}
 	return eCtx.NoContent(http.StatusOK)
 }
+
+func (d DivisionRouter) HandlerUpdateDivision(eCtx echo.Context) error {
+	var div entity.Division
+	if err := eCtx.Bind(&div); err != nil {
+		d.log.Warn("Warn of binding the request body for division updating")
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: the request body has wrong format", server.ErrRequestInfo),
+		})
+	}
+
+	err := validateDivision(div)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	err = d.divisionService.UpdateDivision(ctx, div)
+	if err != nil {
+		if errors.Is(err, division.ErrDivisionNotFound) {
+			d.log.Warn("Warn of updating the unexisting division")
+			return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: the division doesn't exist", ErrDivisionUpdating),
+			})
+
+		} else if errors.Is(err, division.ErrSuperdivisionNotFound) {
+			d.log.Warn("Warn of updating the division by unexisting superdivision")
+			return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: the division of type '%s' may not have the unexisting superdivision",
+					ErrDivisionUpdating, div.Type),
+			})
+		}
+		d.log.Error(fmt.Sprintf("Error of updating the division: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrRequestInfo.Error(),
+		})
+	}
+	return eCtx.NoContent(http.StatusOK)
+}

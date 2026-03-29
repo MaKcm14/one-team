@@ -14,6 +14,25 @@ const (
 	divisionIDQueryParamKey = "division_id"
 )
 
+func validateDivision(div entity.Division) error {
+	if !entity.IsDivisionTypeValid(div.Type) {
+		return fmt.Errorf("the division type is not valid")
+	}
+
+	if div.StateSize <= 0 {
+		return fmt.Errorf("the division's state size can't be less than 1")
+	}
+
+	if div.SuperdivisionID < 0 {
+		return fmt.Errorf("the division's superdivision_id can't be less than 0")
+	}
+
+	if div.SuperdivisionID != 0 && div.Type == entity.DivisionTypeName {
+		return fmt.Errorf("the division of type '%s' can't have the superdivision", entity.DivisionTypeName)
+	}
+	return nil
+}
+
 func validateDivisionID(ctx echo.Context) (int, error) {
 	val := ctx.QueryParam(divisionIDQueryParamKey)
 	if len(val) == 0 {
