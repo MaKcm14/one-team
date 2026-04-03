@@ -70,3 +70,34 @@ func (r Interactor) DeleteUser(ctx context.Context, login string) error {
 	}
 	return nil
 }
+
+func (r Interactor) UpdateUserRole(ctx context.Context, dto UserDTO) error {
+	role, err := r.repo.GetUserRole(ctx, dto.Login)
+	if err != nil {
+		if errors.Is(err, persistent.ErrRoleNotAssign) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	if role == entity.AdminRole {
+		return ErrUnableToChangeAdminRole
+	}
+
+	err = r.repo.IsRoleExists(ctx, dto.Role)
+	if err != nil {
+		if errors.Is(err, persistent.ErrRoleNotFound) {
+			return ErrRoleNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	err = r.repo.UpdateUserRole(ctx, dto)
+	if err != nil {
+		if errors.Is(err, persistent.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
+}

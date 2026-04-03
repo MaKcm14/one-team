@@ -1,12 +1,12 @@
 module github.com/MaKcm14/one-team
 
-go 1.24.6
+go 1.25.0
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
-	github.com/jackc/pgx/v5 v5.8.0
+	github.com/jackc/pgx/v5 v5.9.0
 	github.com/labstack/echo/v4 v4.15.1
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/xuri/excelize/v2 v2.10.1

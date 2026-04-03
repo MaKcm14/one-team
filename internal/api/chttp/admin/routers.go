@@ -174,3 +174,43 @@ func (a AdminRouter) HandlerAdminDeleteUser(eCtx echo.Context) error {
 	}
 	return eCtx.NoContent(http.StatusOK)
 }
+
+func (a AdminRouter) HandlerAdminUpdateUserRole(eCtx echo.Context) error {
+	dto := root.UserDTO{}
+	if err := eCtx.Bind(&dto); err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: wrong body was got", server.ErrRequestInfo),
+		})
+	}
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
+	defer cancel()
+
+	err := a.rootService.UpdateUserRole(ctx, dto)
+	if err != nil {
+		if errors.Is(err, root.ErrRoleNotFound) {
+			a.log.Warn("Try to update the user's role with unexisting role")
+
+			return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: can't assign the unexisting role", server.ErrRequestInfo),
+			})
+		} else if errors.Is(err, root.ErrUserNotFound) {
+			a.log.Warn("Try to update the unexisting user")
+
+			return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: can't update the role of unexisting user", server.ErrRequestInfo),
+			})
+		} else if errors.Is(err, root.ErrUnableToChangeAdminRole) {
+			a.log.Error("Try to update the admin's role")
+
+			return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+				Error: fmt.Sprintf("%s: can't update the admin's role: restrict", server.ErrRequestInfo),
+			})
+		}
+		a.log.Error(fmt.Sprintf("Error of updating the user: %s", err))
+
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.NoContent(http.StatusOK)
+}

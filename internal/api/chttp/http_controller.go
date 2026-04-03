@@ -105,6 +105,8 @@ func (c Controller) configEndpoints() {
 
 		adminGroup.DELETE("/session/flush", c.adminRouter.HandlerAdminSessionFlush)
 		adminGroup.DELETE("/user/delete", c.adminRouter.HandlerAdminDeleteUser)
+
+		adminGroup.PATCH("/user/assign/role", c.adminRouter.HandlerAdminUpdateUserRole)
 	}
 
 	clientGroup := c.e.Group("/client", c.auth.VerifyAccessTokenMW())

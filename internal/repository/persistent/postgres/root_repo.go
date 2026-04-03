@@ -92,3 +92,58 @@ func (r rootRepo) DeleteUser(ctx context.Context, login string) error {
 	}
 	return nil
 }
+
+const updateUserRoleQuery = `
+UPDATE app_realm.users
+SET role_id=(
+	SELECT id
+	FROM app_realm.roles
+	WHERE name=$1
+)
+WHERE login=$2;
+`
+
+func (r rootRepo) UpdateUserRole(ctx context.Context, user root.UserDTO) error {
+	res, err := r.client.conn.Exec(
+		ctx,
+		updateUserRoleQuery,
+		user.Role,
+		user.Login,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrUserNotFound
+	}
+	return nil
+}
+
+const isRoleExistsQuery = `
+SELECT COUNT(*)
+FROM app_realm.roles
+WHERE name=$1;
+`
+
+func (r rootRepo) IsRoleExists(ctx context.Context, role entity.Role) error {
+	res, err := r.client.conn.Query(ctx, isRoleExistsQuery, role)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+	defer res.Close()
+
+	if !res.Next() {
+		return persistent.ErrQueryExec
+	}
+
+	var count int
+	if err := res.Scan(&count); err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if count == 0 {
+		return persistent.ErrRoleNotFound
+	}
+	return nil
+}
