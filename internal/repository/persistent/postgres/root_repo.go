@@ -75,3 +75,20 @@ func (r rootRepo) GetRoles(ctx context.Context) ([]root.Role, error) {
 	}
 	return list, nil
 }
+
+const deleteUserQuery = `
+DELETE FROM app_realm.users
+WHERE login=$1;
+`
+
+func (r rootRepo) DeleteUser(ctx context.Context, login string) error {
+	res, err := r.client.conn.Exec(ctx, deleteUserQuery, login)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrUserNotFound
+	}
+	return nil
+}

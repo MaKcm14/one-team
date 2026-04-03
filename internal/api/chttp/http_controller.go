@@ -87,7 +87,6 @@ func (c Controller) configEndpoints() {
 	c.e.Use(
 		mw.Recovery(c.log),
 		mw.LoggerMW(c.log),
-		c.auth.ExtractSessionMW(),
 		c.auth.DebugPrintCaches(),
 	)
 
@@ -97,12 +96,15 @@ func (c Controller) configEndpoints() {
 		})
 	})
 
-	adminGroup := c.e.Group("/admin") //, c.auth.VerifyAccessTokenMW())
+	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW())
 	{
 		adminGroup.POST("/signup", c.auth.HandlerSignUp)
 
 		adminGroup.GET("/get/users", c.adminRouter.HandlerAdminGetUsers)
 		adminGroup.GET("/get/roles", c.adminRouter.HandlerAdminGetRoles)
+
+		adminGroup.DELETE("/session/flush", c.adminRouter.HandlerAdminSessionFlush)
+		adminGroup.DELETE("/user/delete", c.adminRouter.HandlerAdminDeleteUser)
 	}
 
 	clientGroup := c.e.Group("/client", c.auth.VerifyAccessTokenMW())

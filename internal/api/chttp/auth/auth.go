@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -55,29 +54,12 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 				})
 			}
 
-			sessionID, err := ExtractSessionIDFromCtx(ctx)
-			if err != nil {
-				a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
-				return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
-					Error: server.ErrRequestInfo.Error(),
-				})
-			}
-
-			_, expAt, ok := a.tokens.AccessTokens.GetWithExpiration(sessionID)
-			if !ok || expAt.Before(time.Now()) {
-				a.log.Warn(fmt.Sprintf("Warn of checking the token: it's expired"))
-				return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
-					Error: ErrAccessTokenNotValid.Error(),
-				})
-			}
-
 			claims, err := a.acToken.VerifyAccessToken(authHeader[len(bearerAuth):])
 			if err != nil {
 				return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 					Error: ErrAccessTokenNotValid.Error(),
 				})
 			}
-
 			ctx.Set(TokenClaimsCtxKey, claims)
 
 			return next(ctx)
@@ -92,22 +74,6 @@ func ExtractClaimsFromCtx(ctx echo.Context) (token.Claims, error) {
 		return token.Claims{}, errors.New("claims wasn't set in context")
 	}
 	return claims, nil
-}
-
-func (a Authenticator) ExtractSessionMW() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx echo.Context) error {
-			session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
-			if err == nil {
-				rawSessionID := session.Values[sessionIDCookieKey]
-				sessionID, ok := rawSessionID.(string)
-				if ok {
-					ctx.Set(SessionIDCtxKey, sessionID)
-				}
-			}
-			return next(ctx)
-		}
-	}
 }
 
 func (a Authenticator) DebugPrintCaches() echo.MiddlewareFunc {

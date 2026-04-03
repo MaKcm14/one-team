@@ -2,8 +2,6 @@ controller:
     socket: 'localhost:8080'
 
     auth:
-        session_key: 'session_key'
-
         pwd_salt: 132784681
 
         secret: "SfouihcnswvUWIO_12f1biio"

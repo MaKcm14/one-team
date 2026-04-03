@@ -63,37 +63,20 @@ func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 }
 
 func (a Authenticator) HandlerLogout(ctx echo.Context) error {
-	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+	claims, err := ExtractClaimsFromCtx(ctx)
 	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of getting the session while logout: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
-
-	sessionID, err := ExtractSessionIDFromCtx(ctx)
-	if err != nil {
-		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
+		a.log.Warn(fmt.Sprintf("Warn of extracting the claims: %s", err))
 		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
 			Error: server.ErrRequestInfo.Error(),
 		})
 	}
-	delete(session.Values, sessionIDCookieKey)
 
-	a.tokens.AccessTokens.Delete(sessionID)
-	a.tokens.RefreshTokens.Delete(sessionID)
-	a.session.Sessions.Delete(sessionID)
+	a.tokens.AccessTokens.Delete(claims.SessionID)
+	a.tokens.RefreshTokens.Delete(claims.SessionID)
+	a.session.Sessions.Delete(claims.SessionID)
 
-	claims, _ := ExtractClaimsFromCtx(ctx)
 	a.session.Sessions.Delete(claims.UserData.Login)
 
-	err = session.Save(ctx.Request(), ctx.Response().Writer)
-	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of saving no-session in cookie while logout: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
 	return ctx.NoContent(http.StatusOK)
 }
 
@@ -111,15 +94,15 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 		})
 	}
 
-	sessionID, err := ExtractSessionIDFromCtx(ctx)
+	claims, err := ExtractClaimsFromCtx(ctx)
 	if err != nil {
-		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
+		a.log.Warn(fmt.Sprintf("Warn of extracting the claims: %s", err))
 		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
 			Error: server.ErrRequestInfo.Error(),
 		})
 	}
 
-	hashRefreshToken, err := a.tokens.GetHashRefreshToken(sessionID)
+	hashRefreshToken, err := a.tokens.GetHashRefreshToken(claims.SessionID)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of refresh-token storage: %s", err))
 		return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
@@ -135,16 +118,16 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 		})
 	}
 
-	a.tokens.RefreshTokens.Delete(sessionID)
+	a.tokens.RefreshTokens.Delete(claims.SessionID)
 
-	userSession, err := a.session.GetSession(sessionID)
+	userSession, err := a.session.GetSession(claims.SessionID)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of getting the session: %s", err))
 		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 			Error: server.ErrHandleRequest.Error(),
 		})
 	}
-	return a.issueTokens(ctx, sessionID, userSession)
+	return a.issueTokens(ctx, claims.SessionID, userSession)
 }
 
 func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
@@ -172,7 +155,7 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 			} else if errors.Is(err, user.ErrVerifyPassword) {
 				if errors.Is(err, user.ErrPasswordLength) {
 					return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-						Error: "password length must be at least 9 symbols",
+						Error: "password length must be at least 9 symbols and less than 17",
 					})
 				} else if errors.Is(err, user.ErrPasswordSymbols) {
 					return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
@@ -251,23 +234,6 @@ func (a Authenticator) issueTokens(ctx echo.Context, sid string, userSession use
 	})
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of issue the token: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
-
-	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
-	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of getting the session from the cookie: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
-	session.Values[sessionIDCookieKey] = sid
-
-	err = a.session.Writer.Save(ctx.Request(), ctx.Response().Writer, session)
-	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of saving the session in the cookie"))
 		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 			Error: server.ErrHandleRequest.Error(),
 		})

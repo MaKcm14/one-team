@@ -2,7 +2,11 @@ package root
 
 import (
 	"context"
+	"errors"
 	"fmt"
+
+	entity "github.com/MaKcm14/one-team/internal/entity/user"
+	"github.com/MaKcm14/one-team/internal/repository/persistent"
 )
 
 type Interactor struct {
@@ -37,4 +41,32 @@ func (r Interactor) GetRoles(ctx context.Context) ([]Role, error) {
 		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}
 	return list, nil
+}
+
+func (r Interactor) DeleteUser(ctx context.Context, login string) error {
+	_, err := r.repo.GetUser(ctx, login)
+	if err != nil {
+		if errors.Is(err, persistent.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	role, err := r.repo.GetUserRole(ctx, login)
+	if err != nil {
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+
+	if role == entity.AdminRole {
+		return ErrUnableToDeleteAdmin
+	}
+
+	err = r.repo.DeleteUser(ctx, login)
+	if err != nil {
+		if errors.Is(err, persistent.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("%w: %s", ErrRepoInteract, err)
+	}
+	return nil
 }
