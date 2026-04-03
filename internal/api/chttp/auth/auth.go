@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -28,6 +29,7 @@ func NewAuthenticator(
 	log *slog.Logger,
 	cfg config.AuthConfig,
 	session SessionConfig,
+	tokenStorage token.TokenStorage,
 	authService user.IAuthService,
 ) Authenticator {
 	return Authenticator{
@@ -35,7 +37,7 @@ func NewAuthenticator(
 		acToken:     token.NewAccessToken(cfg),
 		refToken:    token.NewRefreshToken(cfg),
 		authService: authService,
-		tokens:      token.NewTokenStorage(),
+		tokens:      tokenStorage,
 		session:     session,
 	}
 }
@@ -81,6 +83,15 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 			return next(ctx)
 		}
 	}
+}
+
+func ExtractClaimsFromCtx(ctx echo.Context) (token.Claims, error) {
+	val := ctx.Get(TokenClaimsCtxKey)
+	claims, ok := val.(token.Claims)
+	if !ok {
+		return token.Claims{}, errors.New("claims wasn't set in context")
+	}
+	return claims, nil
 }
 
 func (a Authenticator) ExtractSessionMW() echo.MiddlewareFunc {

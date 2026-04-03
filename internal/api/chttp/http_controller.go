@@ -8,7 +8,9 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/MaKcm14/one-team/internal/api"
+	"github.com/MaKcm14/one-team/internal/api/chttp/admin"
 	"github.com/MaKcm14/one-team/internal/api/chttp/auth"
+	"github.com/MaKcm14/one-team/internal/api/chttp/auth/token"
 	"github.com/MaKcm14/one-team/internal/api/chttp/divisions"
 	"github.com/MaKcm14/one-team/internal/api/chttp/employees"
 	"github.com/MaKcm14/one-team/internal/api/chttp/mw"
@@ -16,6 +18,7 @@ import (
 	"github.com/MaKcm14/one-team/internal/config"
 	"github.com/MaKcm14/one-team/internal/services/usecase/division"
 	"github.com/MaKcm14/one-team/internal/services/usecase/employee"
+	"github.com/MaKcm14/one-team/internal/services/usecase/root"
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
@@ -27,16 +30,19 @@ type Controller struct {
 	auth           auth.Authenticator
 	employeeRouter employees.EmployeeRouter
 	divisionRouter divisions.DivisionRouter
+	adminRouter    admin.AdminRouter
 }
 
 func New(
 	log *slog.Logger,
 	cfg config.ControllerConfig,
 	authService user.IAuthService,
+	rootService root.IRootService,
 	employeeService employee.IEmployeeService,
 	divisionService division.IDivisionService,
 ) *Controller {
 	session := auth.NewSessionConfig(cfg.AuthCfg)
+	tokenStorage := token.NewTokenStorage()
 	return &Controller{
 		e:   echo.New(),
 		log: log,
@@ -45,6 +51,7 @@ func New(
 			log,
 			cfg.AuthCfg,
 			session,
+			tokenStorage,
 			authService,
 		),
 		employeeRouter: employees.NewEmployeeRouter(
@@ -55,6 +62,12 @@ func New(
 		divisionRouter: divisions.NewDivisionRouter(
 			log,
 			divisionService,
+		),
+		adminRouter: admin.NewAdminRouter(
+			log,
+			tokenStorage,
+			session,
+			rootService,
 		),
 	}
 }
@@ -84,9 +97,12 @@ func (c Controller) configEndpoints() {
 		})
 	})
 
-	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW())
+	adminGroup := c.e.Group("/admin") //, c.auth.VerifyAccessTokenMW())
 	{
 		adminGroup.POST("/signup", c.auth.HandlerSignUp)
+
+		adminGroup.GET("/get/users", c.adminRouter.HandlerAdminGetUsers)
+		adminGroup.GET("/get/roles", c.adminRouter.HandlerAdminGetRoles)
 	}
 
 	clientGroup := c.e.Group("/client", c.auth.VerifyAccessTokenMW())

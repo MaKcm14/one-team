@@ -1,3 +1,6 @@
 package entity
 
-type Role string
+type (
+	Right string
+	Role  string
+)

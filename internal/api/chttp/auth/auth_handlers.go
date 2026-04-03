@@ -84,6 +84,9 @@ func (a Authenticator) HandlerLogout(ctx echo.Context) error {
 	a.tokens.RefreshTokens.Delete(sessionID)
 	a.session.Sessions.Delete(sessionID)
 
+	claims, _ := ExtractClaimsFromCtx(ctx)
+	a.session.Sessions.Delete(claims.UserData.Login)
+
 	err = session.Save(ctx.Request(), ctx.Response().Writer)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of saving no-session in cookie while logout: %s", err))
@@ -276,6 +279,7 @@ func (a Authenticator) issueTokens(ctx echo.Context, sid string, userSession use
 	a.tokens.AccessTokens.Set(sid, accessTokenID.String(), 0)
 	a.tokens.RefreshTokens.Set(sid, string(refreshTokenHash), 0)
 	a.session.Sessions.Set(sid, userSession, 0)
+	a.session.SetSIDForLogin(userSession.UserClaims.Login, sid, 0)
 
 	return ctx.JSON(http.StatusOK, tokens{
 		AccessToken:  accessToken,

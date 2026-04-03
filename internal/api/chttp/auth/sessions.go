@@ -49,6 +49,23 @@ func (s SessionConfig) Set(sid string, session user.UserSession, ttl time.Durati
 	s.Sessions.Set(sid, session, ttl)
 }
 
+func (s SessionConfig) SetSIDForLogin(login, sid string, ttl time.Duration) {
+	s.Sessions.Set(login, sid, ttl)
+}
+
+func (s SessionConfig) GetSIDForLogin(login string) (string, error) {
+	val, ok := s.Sessions.Get(login)
+	if !ok {
+		return "", fmt.Errorf("%w: session has expired or wasn't opened", ErrSessionNotFound)
+	}
+
+	sid, ok := val.(string)
+	if !ok {
+		return "", fmt.Errorf("%w: other format expected for converting", ErrSessionWrongFormat)
+	}
+	return sid, nil
+}
+
 func (a Authenticator) createSession() (string, error) {
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -62,7 +79,7 @@ func ExtractSessionIDFromCtx(ctx echo.Context) (string, error) {
 	val := ctx.Get(SessionIDCtxKey)
 	sessionID, ok := val.(string)
 	if !ok {
-		return "", errors.New("session_id wasn't set for the response")
+		return "", errors.New("session_id wasn't set in context")
 	}
 	return sessionID, nil
 }
