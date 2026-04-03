@@ -9,7 +9,7 @@ import (
 	"github.com/MaKcm14/one-team/internal/services/usecase/root"
 )
 
-type rootRepo struct {
+type roleRepo struct {
 	client *postgresClient
 }
 
@@ -26,7 +26,7 @@ FROM
 WHERE app_realm.roles.name=$1;
 `
 
-func (r rootRepo) getRoleRights(ctx context.Context, roleName entity.Role) ([]entity.Right, error) {
+func (r roleRepo) getRoleRights(ctx context.Context, roleName entity.Role) ([]entity.Right, error) {
 	res, err := r.client.conn.Query(ctx, getRoleRightsQuery, roleName)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
@@ -50,7 +50,7 @@ SELECT name
 FROM app_realm.roles;
 `
 
-func (r rootRepo) GetRoles(ctx context.Context) ([]root.Role, error) {
+func (r roleRepo) GetRoles(ctx context.Context) ([]root.Role, error) {
 	res, err := r.client.conn.Query(ctx, getRolesQuery)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
@@ -76,57 +76,13 @@ func (r rootRepo) GetRoles(ctx context.Context) ([]root.Role, error) {
 	return list, nil
 }
 
-const deleteUserQuery = `
-DELETE FROM app_realm.users
-WHERE login=$1;
-`
-
-func (r rootRepo) DeleteUser(ctx context.Context, login string) error {
-	res, err := r.client.conn.Exec(ctx, deleteUserQuery, login)
-	if err != nil {
-		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
-	}
-
-	if res.RowsAffected() == 0 {
-		return persistent.ErrUserNotFound
-	}
-	return nil
-}
-
-const updateUserRoleQuery = `
-UPDATE app_realm.users
-SET role_id=(
-	SELECT id
-	FROM app_realm.roles
-	WHERE name=$1
-)
-WHERE login=$2;
-`
-
-func (r rootRepo) UpdateUserRole(ctx context.Context, user root.UserDTO) error {
-	res, err := r.client.conn.Exec(
-		ctx,
-		updateUserRoleQuery,
-		user.Role,
-		user.Login,
-	)
-	if err != nil {
-		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
-	}
-
-	if res.RowsAffected() == 0 {
-		return persistent.ErrUserNotFound
-	}
-	return nil
-}
-
 const isRoleExistsQuery = `
 SELECT COUNT(*)
 FROM app_realm.roles
 WHERE name=$1;
 `
 
-func (r rootRepo) IsRoleExists(ctx context.Context, role entity.Role) error {
+func (r roleRepo) IsRoleExists(ctx context.Context, role entity.Role) error {
 	res, err := r.client.conn.Query(ctx, isRoleExistsQuery, role)
 	if err != nil {
 		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)

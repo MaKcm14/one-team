@@ -93,3 +93,30 @@ func (auth Interactor) SignUp(ctx context.Context, dto user.UserSignUpDTO) error
 	}
 	return fmt.Errorf("%w: %w", user.ErrSignUp, user.ErrUserAlreadyExists)
 }
+
+func (auth Interactor) ChangePassword(ctx context.Context, creds user.Credentials, newPwd string) error {
+	_, err := auth.Login(ctx, creds)
+	if err != nil {
+		return err
+	}
+
+	if err := auth.verifyPassword(newPwd); err != nil {
+		return fmt.Errorf("%w: %w", user.ErrChangePassword, err)
+	}
+
+	userSalt := auth.generateSalt()
+	hashPwd, err := auth.hashPassword(newPwd, userSalt)
+	if err != nil {
+		return fmt.Errorf("%w: %s", user.ErrHashPassword, err)
+	}
+
+	err = auth.authRepo.UpdateUserPassword(ctx, entity.User{
+		Login:   creds.Login,
+		HashPWD: string(hashPwd),
+		Salt:    userSalt,
+	})
+	if err != nil {
+		return fmt.Errorf("%w: %s", user.ErrRepoInteract, err)
+	}
+	return nil
+}

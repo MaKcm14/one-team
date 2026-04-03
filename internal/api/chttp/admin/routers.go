@@ -13,6 +13,7 @@ import (
 	"github.com/MaKcm14/one-team/internal/api/chttp/server"
 	entity "github.com/MaKcm14/one-team/internal/entity/user"
 	"github.com/MaKcm14/one-team/internal/services/usecase/root"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 	"github.com/labstack/echo/v4"
 )
 
@@ -22,6 +23,7 @@ type AdminRouter struct {
 	session auth.SessionConfig
 
 	rootService root.IRootService
+	authService user.IAuthService
 }
 
 func NewAdminRouter(

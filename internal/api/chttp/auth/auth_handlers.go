@@ -18,16 +18,11 @@ import (
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
-type httpError struct {
-	code int
-	resp server.ErrorResponse
-}
-
 func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 	creds, httpErr := parseRequestForCreds(eCtx)
 	if httpErr != nil {
 		a.log.Warn(fmt.Sprintf("Warn of parsing the creds"))
-		return eCtx.JSON(httpErr.code, httpErr.resp)
+		return eCtx.JSON(httpErr.Code, httpErr.Resp)
 	}
 
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 8*time.Second)
@@ -176,14 +171,14 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 	return eCtx.NoContent(http.StatusCreated)
 }
 
-func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
+func parseRequestForCreds(ctx echo.Context) (user.Credentials, *server.HttpError) {
 	const basicAuth = "Basic "
 
 	authHeader := ctx.Request().Header.Get("Authorization")
 	if !strings.HasPrefix(authHeader, basicAuth) {
-		return user.Credentials{}, &httpError{
-			code: http.StatusUnauthorized,
-			resp: server.ErrorResponse{
+		return user.Credentials{}, &server.HttpError{
+			Code: http.StatusUnauthorized,
+			Resp: server.ErrorResponse{
 				Error: ErrInvalidAuthHeader.Error(),
 			},
 		}
@@ -191,9 +186,9 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 
 	rawCreds, err := base64.StdEncoding.DecodeString(authHeader[len(basicAuth):])
 	if err != nil {
-		return user.Credentials{}, &httpError{
-			code: http.StatusBadRequest,
-			resp: server.ErrorResponse{
+		return user.Credentials{}, &server.HttpError{
+			Code: http.StatusBadRequest,
+			Resp: server.ErrorResponse{
 				Error: ErrInvalidAuthHeader.Error(),
 			},
 		}
@@ -201,9 +196,9 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 
 	creds := strings.Split(string(rawCreds), ":")
 	if len(creds) != 2 {
-		return user.Credentials{}, &httpError{
-			code: http.StatusBadRequest,
-			resp: server.ErrorResponse{
+		return user.Credentials{}, &server.HttpError{
+			Code: http.StatusBadRequest,
+			Resp: server.ErrorResponse{
 				Error: ErrWrongAuthInfo.Error(),
 			},
 		}
@@ -251,4 +246,39 @@ func (a Authenticator) issueTokens(ctx echo.Context, sid string, userSession use
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	})
+}
+
+func (a Authenticator) HandlerPasswordChange(eCtx echo.Context) error {
+	type request struct {
+		NewPwd string `json:"new_password"`
+	}
+
+	creds, httpErr := parseRequestForCreds(eCtx)
+	if httpErr != nil {
+		return eCtx.JSON(httpErr.Code, httpErr.Resp)
+	}
+
+	var req request
+	if err := eCtx.Bind(&req); err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: wrong body was got", server.ErrRequestInfo),
+		})
+	}
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 10*time.Second)
+	defer cancel()
+
+	err := a.authService.ChangePassword(ctx, creds, req.NewPwd)
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) || errors.Is(err, user.ErrWrongPassword) || errors.Is(err, user.ErrRoleNotAssign) {
+			a.log.Error(fmt.Sprintf("Error of authentication: %s", err))
+			return eCtx.JSON(http.StatusUnauthorized, server.ErrorResponse{
+				Error: ErrInvalidAuthInfo.Error(),
+			})
+		}
+		a.log.Error(fmt.Sprintf("Error of app-module: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.NoContent(http.StatusOK)
 }

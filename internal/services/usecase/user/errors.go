@@ -3,6 +3,7 @@ package user
 import "errors"
 
 var (
+	ErrChangePassword    = errors.New("user: error of changing the password")
 	ErrHashPassword      = errors.New("user: error of hashing the password")
 	ErrWrongPassword     = errors.New("user: error of comparing the passwords: not equal")
 	ErrUserAlreadyExists = errors.New("user: error of creating the user: already exists")

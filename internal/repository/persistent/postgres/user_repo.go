@@ -6,6 +6,7 @@ import (
 
 	entity "github.com/MaKcm14/one-team/internal/entity/user"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
+	"github.com/MaKcm14/one-team/internal/services/usecase/root"
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
@@ -136,4 +137,72 @@ func (u userRepo) GetUsers(ctx context.Context) ([]user.UserDTO, error) {
 	}
 
 	return list, nil
+}
+
+const deleteUserQuery = `
+DELETE FROM app_realm.users
+WHERE login=$1;
+`
+
+func (u userRepo) DeleteUser(ctx context.Context, login string) error {
+	res, err := u.client.conn.Exec(ctx, deleteUserQuery, login)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrUserNotFound
+	}
+	return nil
+}
+
+const updateUserRoleQuery = `
+UPDATE app_realm.users
+SET role_id=(
+	SELECT id
+	FROM app_realm.roles
+	WHERE name=$1
+)
+WHERE login=$2;
+`
+
+func (u userRepo) UpdateUserRole(ctx context.Context, user root.UserDTO) error {
+	res, err := u.client.conn.Exec(
+		ctx,
+		updateUserRoleQuery,
+		user.Role,
+		user.Login,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrUserNotFound
+	}
+	return nil
+}
+
+const updateUserPasswordQuery = `
+UPDATE app_realm.users
+SET salt=$1, hash_pwd=$2
+WHERE login=$3;
+`
+
+func (u userRepo) UpdateUserPassword(ctx context.Context, user entity.User) error {
+	res, err := u.client.conn.Exec(
+		ctx,
+		updateUserPasswordQuery,
+		user.Salt,
+		user.HashPWD,
+		user.Login,
+	)
+	if err != nil {
+		return fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)
+	}
+
+	if res.RowsAffected() == 0 {
+		return persistent.ErrUserNotFound
+	}
+	return nil
 }

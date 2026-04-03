@@ -11,7 +11,7 @@ type Repository struct {
 	userRepo
 	employeeRepo
 	divisionRepo
-	rootRepo
+	roleRepo
 
 	client *postgresClient
 }
@@ -32,7 +32,7 @@ func NewRepository(log logger.Logger, cfg config.DBConfig) (Repository, error) {
 		divisionRepo: divisionRepo{
 			client: client,
 		},
-		rootRepo: rootRepo{
+		roleRepo: roleRepo{
 			client: client,
 		},
 	}, nil

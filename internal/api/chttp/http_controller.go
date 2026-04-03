@@ -118,6 +118,8 @@ func (c Controller) configEndpoints() {
 	{
 		authGroup.POST("/login", c.auth.HandlerLogin)
 		authGroup.POST("/token/refresh", c.auth.HandlerRefresh)
+
+		authGroup.PATCH("/password/change", c.auth.HandlerPasswordChange)
 	}
 
 	employeeGroup := c.e.Group("/employee")
