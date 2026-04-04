@@ -96,10 +96,8 @@ func (c Controller) configEndpoints() {
 		})
 	})
 
-	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW())
+	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW(), c.auth.GrantAdminAccessMW())
 	{
-		adminGroup.POST("/signup", c.auth.HandlerSignUp)
-
 		adminGroup.GET("/get/users", c.adminRouter.HandlerAdminGetUsers)
 		adminGroup.GET("/get/roles", c.adminRouter.HandlerAdminGetRoles)
 
@@ -109,44 +107,43 @@ func (c Controller) configEndpoints() {
 		adminGroup.PATCH("/user/assign/role", c.adminRouter.HandlerAdminUpdateUserRole)
 	}
 
-	clientGroup := c.e.Group("/client", c.auth.VerifyAccessTokenMW())
-	{
-		clientGroup.POST("/logout", c.auth.HandlerLogout)
-	}
-
 	authGroup := c.e.Group("/auth")
 	{
+		authGroup.POST("/signup", c.auth.HandlerSignUp, c.auth.VerifyAccessTokenMW(), c.auth.GrantAdminAccessMW())
+
 		authGroup.POST("/login", c.auth.HandlerLogin)
+		authGroup.POST("/logout", c.auth.HandlerLogout, c.auth.VerifyAccessTokenMW())
+
 		authGroup.POST("/token/refresh", c.auth.HandlerRefresh)
 
 		authGroup.PATCH("/password/change", c.auth.HandlerPasswordChange)
 	}
 
-	employeeGroup := c.e.Group("/employee")
+	employeeGroup := c.e.Group("/employee", c.auth.VerifyAccessTokenMW())
 	{
-		employeeGroup.GET("/get/citizenships", c.employeeRouter.HandlerGetCitizenships)
-		employeeGroup.GET("/get/titles", c.employeeRouter.HandlerGetTitles)
-		employeeGroup.GET("/get/employee", c.employeeRouter.HandlerGetEmployeeWithFilter)
+		employeeGroup.GET("/get/citizenships", c.employeeRouter.HandlerGetCitizenships, c.auth.GrantAllAccessMW())
+		employeeGroup.GET("/get/titles", c.employeeRouter.HandlerGetTitles, c.auth.GrantAllAccessMW())
+		employeeGroup.GET("/get/list", c.employeeRouter.HandlerGetEmployeeWithFilter, c.auth.GrantAllAccessMW())
 
-		employeeGroup.GET("/statistics/citizenship", c.employeeRouter.HandlerCountEmployeeWithCitizenship)
-		employeeGroup.GET("/statistics/salary", c.employeeRouter.HandlerCountEmployeesWithSalaryBoundary)
+		employeeGroup.GET("/statistics/citizenship", c.employeeRouter.HandlerCountEmployeeWithCitizenship, c.auth.GrantAllAccessMW())
+		employeeGroup.GET("/statistics/salary", c.employeeRouter.HandlerCountEmployeesWithSalaryBoundary, c.auth.GrantAllAccessMW())
 
-		employeeGroup.POST("/create", c.employeeRouter.HandlerCreateEmployee)
+		employeeGroup.POST("/create", c.employeeRouter.HandlerCreateEmployee, c.auth.GrantAdminOrHRManagerAccessMW())
 
-		employeeGroup.PUT("/update", c.employeeRouter.HandlerUpdateEmployee)
-		employeeGroup.DELETE("/delete", c.employeeRouter.HandlerDeleteEmployee)
+		employeeGroup.PUT("/update", c.employeeRouter.HandlerUpdateEmployee, c.auth.GrantAdminOrHRManagerAccessMW())
+		employeeGroup.DELETE("/delete", c.employeeRouter.HandlerDeleteEmployee, c.auth.GrantAdminOrHRManagerAccessMW())
 	}
 
-	divisionGroup := c.e.Group("/division")
+	divisionGroup := c.e.Group("/division", c.auth.VerifyAccessTokenMW())
 	{
-		divisionGroup.GET("/get/list", c.divisionRouter.HandlerGetDivisions)
+		divisionGroup.GET("/get/list", c.divisionRouter.HandlerGetDivisions, c.auth.GrantAllAccessMW())
 
-		divisionGroup.GET("/statistics/salary", c.divisionRouter.HandlerGetSalaryStatisticsOfDivision)
-		divisionGroup.GET("/statistics/statesize", c.divisionRouter.HandlerGetStateSizeStatisticsOfDivisions)
+		divisionGroup.GET("/statistics/salary", c.divisionRouter.HandlerGetSalaryStatisticsOfDivision, c.auth.GrantAllAccessMW())
+		divisionGroup.GET("/statistics/statesize", c.divisionRouter.HandlerGetStateSizeStatisticsOfDivisions, c.auth.GrantAllAccessMW())
 
-		divisionGroup.POST("/create", c.divisionRouter.HandlerCreateDivision)
+		divisionGroup.POST("/create", c.divisionRouter.HandlerCreateDivision, c.auth.GrantAdminAccessMW())
 
-		divisionGroup.PUT("/update", c.divisionRouter.HandlerUpdateDivision)
-		divisionGroup.DELETE("/delete", c.divisionRouter.HandlerDeleteDivision)
+		divisionGroup.PUT("/update", c.divisionRouter.HandlerUpdateDivision, c.auth.GrantAdminAccessMW())
+		divisionGroup.DELETE("/delete", c.divisionRouter.HandlerDeleteDivision, c.auth.GrantAdminAccessMW())
 	}
 }
