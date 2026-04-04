@@ -1,11 +1,11 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/labstack/echo/v4"
 
@@ -22,12 +22,14 @@ type Authenticator struct {
 	tokens      token.TokenStorage
 	session     SessionConfig
 	authService user.IAuthService
+	isSysInit   bool
 }
 
 func NewAuthenticator(
 	log *slog.Logger,
 	cfg config.AuthConfig,
 	session SessionConfig,
+	tokenStorage token.TokenStorage,
 	authService user.IAuthService,
 ) Authenticator {
 	return Authenticator{
@@ -35,7 +37,7 @@ func NewAuthenticator(
 		acToken:     token.NewAccessToken(cfg),
 		refToken:    token.NewRefreshToken(cfg),
 		authService: authService,
-		tokens:      token.NewTokenStorage(),
+		tokens:      tokenStorage,
 		session:     session,
 	}
 }
@@ -53,29 +55,12 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 				})
 			}
 
-			sessionID, err := ExtractSessionIDFromCtx(ctx)
-			if err != nil {
-				a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
-				return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
-					Error: server.ErrRequestInfo.Error(),
-				})
-			}
-
-			_, expAt, ok := a.tokens.AccessTokens.GetWithExpiration(sessionID)
-			if !ok || expAt.Before(time.Now()) {
-				a.log.Warn(fmt.Sprintf("Warn of checking the token: it's expired"))
-				return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
-					Error: ErrAccessTokenNotValid.Error(),
-				})
-			}
-
 			claims, err := a.acToken.VerifyAccessToken(authHeader[len(bearerAuth):])
 			if err != nil {
 				return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
 					Error: ErrAccessTokenNotValid.Error(),
 				})
 			}
-
 			ctx.Set(TokenClaimsCtxKey, claims)
 
 			return next(ctx)
@@ -83,20 +68,13 @@ func (a Authenticator) VerifyAccessTokenMW() echo.MiddlewareFunc {
 	}
 }
 
-func (a Authenticator) ExtractSessionMW() echo.MiddlewareFunc {
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(ctx echo.Context) error {
-			session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
-			if err == nil {
-				rawSessionID := session.Values[sessionIDCookieKey]
-				sessionID, ok := rawSessionID.(string)
-				if ok {
-					ctx.Set(SessionIDCtxKey, sessionID)
-				}
-			}
-			return next(ctx)
-		}
+func ExtractClaimsFromCtx(ctx echo.Context) (token.Claims, error) {
+	val := ctx.Get(TokenClaimsCtxKey)
+	claims, ok := val.(token.Claims)
+	if !ok {
+		return token.Claims{}, errors.New("claims wasn't set in context")
 	}
+	return claims, nil
 }
 
 func (a Authenticator) DebugPrintCaches() echo.MiddlewareFunc {

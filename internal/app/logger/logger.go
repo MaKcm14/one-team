@@ -21,7 +21,7 @@ func New() (Logger, error) {
 
 	return Logger{
 		Logger: slog.New(slog.NewTextHandler(file, &slog.HandlerOptions{
-			Level: slog.LevelDebug, // TODO: set slog.LevelInfo after all features will test.
+			Level: slog.LevelInfo,
 		})),
 		logFile: file,
 	}, nil

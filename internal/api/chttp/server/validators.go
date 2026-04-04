@@ -8,8 +8,26 @@ import (
 )
 
 const (
-	pageNumQueryParamKey = "page_num"
+	pageNumQueryParamKey   = "page_num"
+	sessionIDQueryParamKey = "session_id"
+	loginQueryParamKey     = "login"
 )
+
+func ValidateSessionID(ctx echo.Context) (string, error) {
+	val := ctx.QueryParam(sessionIDQueryParamKey)
+	if len(val) == 0 {
+		return "", fmt.Errorf("parameter '%s' can't be empty", sessionIDQueryParamKey)
+	}
+	return val, nil
+}
+
+func ValidateLogin(ctx echo.Context) (string, error) {
+	val := ctx.QueryParam(loginQueryParamKey)
+	if len(val) == 0 {
+		return "", fmt.Errorf("parameter '%s' can't be empty", loginQueryParamKey)
+	}
+	return val, nil
+}
 
 func ValidatePageNum(ctx echo.Context) (int, error) {
 	val := ctx.QueryParam(pageNumQueryParamKey)

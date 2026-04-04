@@ -18,16 +18,11 @@ import (
 	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
-type httpError struct {
-	code int
-	resp server.ErrorResponse
-}
-
 func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 	creds, httpErr := parseRequestForCreds(eCtx)
 	if httpErr != nil {
 		a.log.Warn(fmt.Sprintf("Warn of parsing the creds"))
-		return eCtx.JSON(httpErr.code, httpErr.resp)
+		return eCtx.JSON(httpErr.Code, httpErr.Resp)
 	}
 
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 8*time.Second)
@@ -63,34 +58,20 @@ func (a Authenticator) HandlerLogin(eCtx echo.Context) error {
 }
 
 func (a Authenticator) HandlerLogout(ctx echo.Context) error {
-	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
+	claims, err := ExtractClaimsFromCtx(ctx)
 	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of getting the session while logout: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
-
-	sessionID, err := ExtractSessionIDFromCtx(ctx)
-	if err != nil {
-		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
+		a.log.Warn(fmt.Sprintf("Warn of extracting the claims: %s", err))
 		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
 			Error: server.ErrRequestInfo.Error(),
 		})
 	}
-	delete(session.Values, sessionIDCookieKey)
 
-	a.tokens.AccessTokens.Delete(sessionID)
-	a.tokens.RefreshTokens.Delete(sessionID)
-	a.session.Sessions.Delete(sessionID)
+	a.tokens.AccessTokens.Delete(claims.SessionID)
+	a.tokens.RefreshTokens.Delete(claims.SessionID)
+	a.session.Sessions.Delete(claims.SessionID)
 
-	err = session.Save(ctx.Request(), ctx.Response().Writer)
-	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of saving no-session in cookie while logout: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
+	a.session.Sessions.Delete(claims.UserData.Login)
+
 	return ctx.NoContent(http.StatusOK)
 }
 
@@ -108,15 +89,15 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 		})
 	}
 
-	sessionID, err := ExtractSessionIDFromCtx(ctx)
+	claims, err := ExtractClaimsFromCtx(ctx)
 	if err != nil {
-		a.log.Warn(fmt.Sprintf("Warn of extracting the session: %s", err))
+		a.log.Warn(fmt.Sprintf("Warn of extracting the claims: %s", err))
 		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
 			Error: server.ErrRequestInfo.Error(),
 		})
 	}
 
-	hashRefreshToken, err := a.tokens.GetHashRefreshToken(sessionID)
+	hashRefreshToken, err := a.tokens.GetHashRefreshToken(claims.SessionID)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of refresh-token storage: %s", err))
 		return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
@@ -132,16 +113,16 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 		})
 	}
 
-	a.tokens.RefreshTokens.Delete(sessionID)
+	a.tokens.RefreshTokens.Delete(claims.SessionID)
 
-	userSession, err := a.session.GetSession(sessionID)
+	userSession, err := a.session.GetSession(claims.SessionID)
 	if err != nil {
 		a.log.Warn(fmt.Sprintf("Warn of getting the session: %s", err))
 		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
 			Error: server.ErrHandleRequest.Error(),
 		})
 	}
-	return a.issueTokens(ctx, sessionID, userSession)
+	return a.issueTokens(ctx, claims.SessionID, userSession)
 }
 
 func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
@@ -169,7 +150,7 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 			} else if errors.Is(err, user.ErrVerifyPassword) {
 				if errors.Is(err, user.ErrPasswordLength) {
 					return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-						Error: "password length must be at least 9 symbols",
+						Error: "password length must be at least 9 symbols and less than 17",
 					})
 				} else if errors.Is(err, user.ErrPasswordSymbols) {
 					return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
@@ -190,14 +171,14 @@ func (a Authenticator) HandlerSignUp(eCtx echo.Context) error {
 	return eCtx.NoContent(http.StatusCreated)
 }
 
-func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
+func parseRequestForCreds(ctx echo.Context) (user.Credentials, *server.HttpError) {
 	const basicAuth = "Basic "
 
 	authHeader := ctx.Request().Header.Get("Authorization")
 	if !strings.HasPrefix(authHeader, basicAuth) {
-		return user.Credentials{}, &httpError{
-			code: http.StatusUnauthorized,
-			resp: server.ErrorResponse{
+		return user.Credentials{}, &server.HttpError{
+			Code: http.StatusUnauthorized,
+			Resp: server.ErrorResponse{
 				Error: ErrInvalidAuthHeader.Error(),
 			},
 		}
@@ -205,9 +186,9 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 
 	rawCreds, err := base64.StdEncoding.DecodeString(authHeader[len(basicAuth):])
 	if err != nil {
-		return user.Credentials{}, &httpError{
-			code: http.StatusBadRequest,
-			resp: server.ErrorResponse{
+		return user.Credentials{}, &server.HttpError{
+			Code: http.StatusBadRequest,
+			Resp: server.ErrorResponse{
 				Error: ErrInvalidAuthHeader.Error(),
 			},
 		}
@@ -215,9 +196,9 @@ func parseRequestForCreds(ctx echo.Context) (user.Credentials, *httpError) {
 
 	creds := strings.Split(string(rawCreds), ":")
 	if len(creds) != 2 {
-		return user.Credentials{}, &httpError{
-			code: http.StatusBadRequest,
-			resp: server.ErrorResponse{
+		return user.Credentials{}, &server.HttpError{
+			Code: http.StatusBadRequest,
+			Resp: server.ErrorResponse{
 				Error: ErrWrongAuthInfo.Error(),
 			},
 		}
@@ -253,32 +234,61 @@ func (a Authenticator) issueTokens(ctx echo.Context, sid string, userSession use
 		})
 	}
 
-	session, err := a.session.Writer.Get(ctx.Request(), sessionIDCookieKey)
-	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of getting the session from the cookie: %s", err))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
-	session.Values[sessionIDCookieKey] = sid
-
-	err = a.session.Writer.Save(ctx.Request(), ctx.Response().Writer, session)
-	if err != nil {
-		a.log.Error(fmt.Sprintf("Error of saving the session in the cookie"))
-		return ctx.JSON(http.StatusInternalServerError, server.ErrorResponse{
-			Error: server.ErrHandleRequest.Error(),
-		})
-	}
-
 	refreshToken := a.refToken.IssueRefreshToken(64)
 	refreshTokenHash, err := a.refToken.HashRefreshToken(refreshToken)
 
 	a.tokens.AccessTokens.Set(sid, accessTokenID.String(), 0)
 	a.tokens.RefreshTokens.Set(sid, string(refreshTokenHash), 0)
 	a.session.Sessions.Set(sid, userSession, 0)
+	a.session.SetSIDForLogin(userSession.UserClaims.Login, sid, 0)
 
 	return ctx.JSON(http.StatusOK, tokens{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	})
+}
+
+func (a Authenticator) HandlerPasswordChange(eCtx echo.Context) error {
+	type request struct {
+		NewPwd string `json:"new_password"`
+	}
+
+	creds, httpErr := parseRequestForCreds(eCtx)
+	if httpErr != nil {
+		return eCtx.JSON(httpErr.Code, httpErr.Resp)
+	}
+
+	var req request
+	if err := eCtx.Bind(&req); err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: wrong body was got", server.ErrRequestInfo),
+		})
+	}
+	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 10*time.Second)
+	defer cancel()
+
+	err := a.authService.ChangePassword(ctx, creds, req.NewPwd)
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) || errors.Is(err, user.ErrWrongPassword) || errors.Is(err, user.ErrRoleNotAssign) {
+			a.log.Error(fmt.Sprintf("Error of authentication: %s", err))
+			return eCtx.JSON(http.StatusUnauthorized, server.ErrorResponse{
+				Error: ErrInvalidAuthInfo.Error(),
+			})
+		}
+		a.log.Error(fmt.Sprintf("Error of app-module: %s", err))
+		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
+			Error: server.ErrHandleRequest.Error(),
+		})
+	}
+	return eCtx.NoContent(http.StatusOK)
+}
+
+func (a *Authenticator) HandlerInit(ctx echo.Context) error {
+	if a.isSysInit {
+		return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
+			Error: "system was initialized: permission denied",
+		})
+	}
+	a.isSysInit = true
+	return a.HandlerSignUp(ctx)
 }
