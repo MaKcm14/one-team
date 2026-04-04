@@ -66,3 +66,15 @@ func (a AccessToken) IssueAccessToken(claims Claims) (string, error) {
 	}
 	return signedToken, nil
 }
+
+func ParseAccessTokenWithoutVerifying(token string) (Claims, error) {
+	p := jwt.NewParser()
+
+	var claims Claims
+	_, _, err := p.ParseUnverified(token, &claims)
+
+	if err != nil {
+		return Claims{}, fmt.Errorf("%w: %s", ErrTokenVerifying, err)
+	}
+	return claims, nil
+}

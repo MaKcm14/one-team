@@ -89,9 +89,9 @@ func (a Authenticator) HandlerRefresh(ctx echo.Context) error {
 		})
 	}
 
-	claims, err := ExtractClaimsFromCtx(ctx)
+	claims, err := token.ParseAccessTokenWithoutVerifying(tokens.AccessToken)
 	if err != nil {
-		a.log.Warn(fmt.Sprintf("Warn of extracting the claims: %s", err))
+		a.log.Warn(fmt.Sprintf("Warn of extracting the claims from the access-token: %s", err))
 		return ctx.JSON(http.StatusBadRequest, server.ErrorResponse{
 			Error: server.ErrRequestInfo.Error(),
 		})

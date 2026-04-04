@@ -17,7 +17,9 @@ type divisionRepo struct {
 const getDivisionsQuery = `
 SELECT id, name, type, state_size, superdivision_id
 FROM usecase.divisions
-WHERE name LIKE $1 AND type LIKE $2;
+WHERE name LIKE $1 AND type LIKE $2
+OFFSET $3
+LIMIT $4;
 `
 
 func (d divisionRepo) GetDivisionsByName(ctx context.Context, filter division.NameFilter) ([]entity.Division, error) {
@@ -26,6 +28,8 @@ func (d divisionRepo) GetDivisionsByName(ctx context.Context, filter division.Na
 		getDivisionsQuery,
 		as(filter.Name),
 		as(string(filter.Type)),
+		filter.PageNum*division.PaginationSize,
+		division.PaginationSize,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", persistent.ErrQueryExec, err)

@@ -98,6 +98,8 @@ func (c Controller) configEndpoints() {
 
 	c.e.POST("/init", c.auth.HandlerInit)
 
+	c.configWebStaticPoints()
+
 	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW(), c.auth.GrantAdminAccessMW())
 	{
 		adminGroup.GET("/get/users", c.adminRouter.HandlerAdminGetUsers)
@@ -148,4 +150,19 @@ func (c Controller) configEndpoints() {
 		divisionGroup.PUT("/update", c.divisionRouter.HandlerUpdateDivision, c.auth.GrantAdminAccessMW())
 		divisionGroup.DELETE("/delete", c.divisionRouter.HandlerDeleteDivision, c.auth.GrantAdminAccessMW())
 	}
+}
+
+func (c Controller) configWebStaticPoints() {
+	c.e.Static("/index.html", "./frontend/index.html")
+	// c.e.Static("/styles/main.css", "./frontend/styles/main.css")
+	// c.e.Static("/js/config.js", "./frontend/js/config.js")
+	// c.e.Static("/js/admin.js", "./frontend/js/admin.js")
+	// c.e.Static("/js/api.js", "./frontend/js/api.js")
+	// c.e.Static("/js/app.js", "./frontend/js/app.js")
+	// c.e.Static("/js/auth.js", "./frontend/js/auth.js")
+	// c.e.Static("/js/divisions.js", "./frontend/js/divisions.js")
+	// c.e.Static("/js/employees.js", "./frontend/js/employees.js")
+	// c.e.Static("/js/login.js", "./frontend/js/login.js")
+	// c.e.Static("/js/router.js", "./frontend/js/router.js")
+	// c.e.Static("/js/utils.js", "./frontend/js/utils.js")
 }
