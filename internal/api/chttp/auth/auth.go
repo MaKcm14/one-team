@@ -22,6 +22,7 @@ type Authenticator struct {
 	tokens      token.TokenStorage
 	session     SessionConfig
 	authService user.IAuthService
+	isSysInit   bool
 }
 
 func NewAuthenticator(

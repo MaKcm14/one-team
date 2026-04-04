@@ -282,3 +282,13 @@ func (a Authenticator) HandlerPasswordChange(eCtx echo.Context) error {
 	}
 	return eCtx.NoContent(http.StatusOK)
 }
+
+func (a *Authenticator) HandlerInit(ctx echo.Context) error {
+	if a.isSysInit {
+		return ctx.JSON(http.StatusUnauthorized, server.ErrorResponse{
+			Error: "system was initialized: permission denied",
+		})
+	}
+	a.isSysInit = true
+	return a.HandlerSignUp(ctx)
+}

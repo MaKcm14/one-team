@@ -96,6 +96,8 @@ func (c Controller) configEndpoints() {
 		})
 	})
 
+	c.e.POST("/init", c.auth.HandlerInit)
+
 	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW(), c.auth.GrantAdminAccessMW())
 	{
 		adminGroup.GET("/get/users", c.adminRouter.HandlerAdminGetUsers)
