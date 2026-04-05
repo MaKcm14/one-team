@@ -52,10 +52,17 @@ func (a AdminRouter) HandlerAdminGetUsers(eCtx echo.Context) error {
 		Users []userResponse `json:"users"`
 	}
 
+	filters, err := validateFilters(eCtx)
+	if err != nil {
+		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
+			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),
+		})
+	}
+
 	ctx, cancel := context.WithTimeout(eCtx.Request().Context(), 5*time.Second)
 	defer cancel()
 
-	list, err := a.rootService.GetUsers(ctx)
+	list, err := a.rootService.GetUsers(ctx, filters)
 	if err != nil {
 		a.log.Error(fmt.Sprintf("Error of getting the users: %s", err))
 		return eCtx.JSON(http.StatusInternalServerError, server.ErrorResponse{
@@ -131,7 +138,7 @@ func (a AdminRouter) HandlerAdminSessionFlush(eCtx echo.Context) error {
 }
 
 func (a AdminRouter) HandlerAdminDeleteUser(eCtx echo.Context) error {
-	login, err := server.ValidateLogin(eCtx)
+	login, err := server.ValidateLoginQueryParam(eCtx, server.WithNoEmptyRequrement())
 	if err != nil {
 		return eCtx.JSON(http.StatusBadRequest, server.ErrorResponse{
 			Error: fmt.Sprintf("%s: %s", server.ErrRequestInfo, err),

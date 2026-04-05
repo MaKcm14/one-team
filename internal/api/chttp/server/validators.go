@@ -13,6 +13,17 @@ const (
 	loginQueryParamKey     = "login"
 )
 
+type ValidateFunc func(val, name string) error
+
+func WithNoEmptyRequrement() ValidateFunc {
+	return func(val, name string) error {
+		if len(val) == 0 {
+			return fmt.Errorf("parameter '%s' can't be empty", name)
+		}
+		return nil
+	}
+}
+
 func ValidateSessionID(ctx echo.Context) (string, error) {
 	val := ctx.QueryParam(sessionIDQueryParamKey)
 	if len(val) == 0 {
@@ -21,10 +32,13 @@ func ValidateSessionID(ctx echo.Context) (string, error) {
 	return val, nil
 }
 
-func ValidateLogin(ctx echo.Context) (string, error) {
+func ValidateLoginQueryParam(ctx echo.Context, opts ...ValidateFunc) (string, error) {
 	val := ctx.QueryParam(loginQueryParamKey)
-	if len(val) == 0 {
-		return "", fmt.Errorf("parameter '%s' can't be empty", loginQueryParamKey)
+
+	for _, opt := range opts {
+		if err := opt(val, loginQueryParamKey); err != nil {
+			return "", err
+		}
 	}
 	return val, nil
 }

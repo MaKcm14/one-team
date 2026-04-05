@@ -16,7 +16,7 @@ type IRootRepoWriter interface {
 type IRootRepoReader interface {
 	IsRoleExists(ctx context.Context, role entity.Role) error
 	GetUser(ctx context.Context, login string) (entity.User, error)
-	GetUsers(ctx context.Context) ([]user.UserDTO, error)
+	GetUsersByLogin(ctx context.Context, filter user.LoginFilter) ([]user.UserDTO, error)
 	GetRoles(ctx context.Context) ([]Role, error)
 	GetUserRole(ctx context.Context, login string) (entity.Role, error)
 }

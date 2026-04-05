@@ -107,7 +107,16 @@
             <div class="grid-2">
                 <div class="card">
                     <div class="card-header">👥 Users</div>
+                    <div class="flex-row" style="margin-bottom: 1rem;">
+                        <input id="userLoginFilter" placeholder="filter by login (partial match)" style="flex:1; margin-bottom:0;">
+                        <button id="searchUsersBtn" style="margin-top:0;">🔍 Search</button>
+                    </div>
                     <div id="usersList" style="max-height: 400px; overflow-y: auto; margin-bottom: 1rem;"></div>
+                    <div class="pagination">
+                        <button id="prevUsersPageBtn" class="btn-outline">◀ Prev</button>
+                        <span id="usersPageNumSpan">page 0</span>
+                        <button id="nextUsersPageBtn" class="btn-outline">Next ▶</button>
+                    </div>
                     <button id="refreshUsersBtn" class="btn-outline" style="margin-bottom: 1rem;">⟳ Refresh</button>
                     <hr>
                     <div class="form-group">
@@ -164,7 +173,6 @@
                     <div class="pagination"><button id="prevDivPageBtn" class="btn-outline">◀ Prev</button><span id="divPageNumSpan">page 0</span><button id="nextDivPageBtn" class="btn-outline">Next ▶</button></div>
                     <hr>
                     <div id="divCreateUpdate">
-                        <!-- Форма создания -->
                         <div class="form-group">
                             <label>➕ Create division</label>
                             <input id="divName" placeholder="name">
@@ -179,30 +187,17 @@
                             <input id="divSuperId" placeholder="superdivision_id (0 if none)">
                             <button id="createDivisionBtn">Create division</button>
                         </div>
-                        
                         <hr>
-                        
-                        <!-- Форма обновления -->
                         <div class="form-group">
                             <label>✏️ Update division (by ID)</label>
                             <input id="updateDivId" placeholder="division_id">
                             <input id="updateDivName" placeholder="new name">
-                            <select id="updateDivType">
-                                <option value="">keep type</option>
-                                <option value="division">division</option>
-                                <option value="directorate">directorate</option>
-                                <option value="department">department</option>
-                                <option value="unit">unit</option>
-                                <option value="group">group</option>
-                            </select>
+                            <select id="updateDivType"><option value="">keep type</option><option value="division">division</option><option value="directorate">directorate</option><option value="department">department</option><option value="unit">unit</option><option value="group">group</option></select>
                             <input id="updateStateSize" placeholder="state size">
                             <input id="updateSuperId" placeholder="superdivision_id">
                             <button id="updateDivisionBtn">Update division</button>
                         </div>
-                        
                         <hr>
-                        
-                        <!-- Форма удаления -->
                         <div class="form-group">
                             <label>🗑️ Delete division (by ID)</label>
                             <div class="flex-row" style="gap:0.5rem; align-items:center;">
@@ -265,7 +260,6 @@
                     <div class="pagination"><button id="prevEmpPageBtn" class="btn-outline">◀ Prev</button><span id="empPageNumSpan">page 0</span><button id="nextEmpPageBtn" class="btn-outline">Next ▶</button></div>
                     <hr>
                     <div id="empCrudArea">
-                        <!-- Форма создания -->
                         <div class="form-group">
                             <label>➕ Create Employee</label>
                             <div class="grid-2">
@@ -286,10 +280,7 @@
                             </div>
                             <button id="createEmployeeBtn">➕ Create Employee</button>
                         </div>
-                        
                         <hr>
-                        
-                        <!-- Форма обновления -->
                         <div class="form-group">
                             <label>✏️ Update Employee (by ID)</label>
                             <div class="grid-2">
@@ -311,10 +302,7 @@
                             </div>
                             <button id="updateEmployeeBtn">✏️ Update Employee</button>
                         </div>
-                        
                         <hr>
-                        
-                        <!-- Форма удаления -->
                         <div class="form-group">
                             <label>🗑️ Delete Employee (by ID)</label>
                             <div class="flex-row" style="gap:0.5rem; align-items:center;">
@@ -364,9 +352,7 @@
             <h3>👤 Employee Details</h3>
             <button class="modal-close" onclick="closeEmployeeModal()">&times;</button>
         </div>
-        <div id="modalContent">
-            <!-- Dynamic content will be inserted here -->
-        </div>
+        <div id="modalContent"></div>
     </div>
 </div>
 
@@ -377,6 +363,8 @@
     let currentLogin = null;
     let divisionsPage = 0;
     let employeesPage = 0;
+    let usersPage = 0;
+    let usersLoginFilter = '';
     let currentEmployeesData = [];
 
     function closeEmployeeModal() {
@@ -562,10 +550,17 @@
     async function loadUsers() {
         if (currentRole !== 'admin') return;
         try {
-            const res = await apiCall('/admin/get/users');
+            let url = `/admin/get/users?page_num=${usersPage}`;
+            if (usersLoginFilter) {
+                url += `&login=${encodeURIComponent(usersLoginFilter)}`;
+            } else {
+                url += `&login=`;
+            }
+            const res = await apiCall(url);
             if (res.ok) {
                 const data = await res.json();
                 renderUsers(data.users);
+                document.getElementById('usersPageNumSpan').innerText = `page ${usersPage}`;
             }
         } catch (e) { console.error(e); }
     }
@@ -871,7 +866,6 @@
         await loadTitlesAndCitizenships();
     }
 
-    // Форма создания
     function buildCreateEmployeeFromForm() {
         let hiringDateRaw = document.getElementById('createHiringDate').value;
         let formattedDate = '';
@@ -897,7 +891,6 @@
         };
     }
 
-    // Форма обновления
     function buildUpdateEmployeeFromForm() {
         let hiringDateRaw = document.getElementById('updateHiringDate').value;
         let formattedDate = '';
@@ -953,7 +946,6 @@
         return employee;
     }
 
-    // Event handlers
     document.addEventListener('click', async (e) => {
         if (e.target.id === 'loginBtn') {
             const login = document.getElementById('loginInput').value;
@@ -976,7 +968,12 @@
             logoutClient();
         }
         
-        if (e.target.id === 'refreshUsersBtn') loadUsers();
+        // User search and pagination
+        if (e.target.id === 'searchUsersBtn') { usersPage = 0; usersLoginFilter = document.getElementById('userLoginFilter').value; loadUsers(); }
+        if (e.target.id === 'prevUsersPageBtn') { if (usersPage > 0) { usersPage--; loadUsers(); } }
+        if (e.target.id === 'nextUsersPageBtn') { usersPage++; loadUsers(); }
+        if (e.target.id === 'refreshUsersBtn') { usersPage = 0; usersLoginFilter = ''; document.getElementById('userLoginFilter').value = ''; loadUsers(); }
+        
         if (e.target.id === 'refreshRolesBtn') loadRoles();
         
         if (e.target.id === 'createUserBtn') {
