@@ -1,8 +1,7 @@
 # OneTeam
 The simple HR-management system for safe control the employees' personal data
 
-<br>
-<br>
+---
 
 ## Description
 This service may help you to manage the company's employees and divisions.
@@ -65,11 +64,12 @@ docker compose up db
 ```
 Wait for a minute until let the PostgreSQL start.
 
-4. 
+4. Apply migrations
+Copy your **DSN** from the config.yaml to the `docker-compose.yaml` in `migrate` service's command to apply the migrations.
+
 ``` bash
 docker compose up migrate
 ```
-Apply migrations.
 
 5. 
 ``` bash
