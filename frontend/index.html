@@ -78,9 +78,84 @@
         .detail-value { font-size: 0.9rem; color: #1e293b; word-break: break-word; }
         .detail-full-width { grid-column: span 2; }
         @media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } .detail-full-width { grid-column: span 1; } }
+        
+        /* Стили для шапки */
+        .app-header {
+            background: white;
+            border-radius: 24px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo-img {
+            height: 60px;
+            width: auto;
+        }
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0f172a;
+            margin: 0;
+        }
+        .header-subtitle {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin: 0;
+        }
+        .header-user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #f8fafc;
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #e2e8f0;
+        }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
+
+<!-- Шапка, видимая всегда -->
+<header class="app-header">
+    <div class="logo-area">
+        <img src="/logo.png" alt="Logo" class="logo-img" style="height: 120px; width: 280px; vertical-align: middle; margin-right: 8px;">
+        <div>
+            <h1 class="header-title">HRM System</h1>
+            <p class="header-subtitle">Human Resource Management Platform</p>
+        </div>
+    </div>
+    <div id="headerUserInfo" class="header-user-info hidden">
+        <div class="user-badge">
+            <span>👤</span>
+            <span id="headerUserRole"></span>
+            <span>·</span>
+            <span id="headerUserLogin"></span>
+        </div>
+        <div class="btn-icon-group" style="margin-top: 0;">
+            <button id="logoutBtn" class="btn-outline">🚪 Logout</button>
+            <button id="changePwdBtn" class="btn-outline">🔑 Change password</button>
+        </div>
+    </div>
+</header>
+
 <div class="container" id="app">
     <div id="authSection">
         <div class="card" style="max-width: 500px; margin: 2rem auto;">
@@ -94,13 +169,6 @@
     </div>
 
     <div id="dashboard" style="display: none;">
-        <div class="flex-row" style="justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2>🏢 HRM Dashboard · <span id="userRoleSpan"></span> · <span id="userLoginSpan"></span></h2>
-            <div class="btn-icon-group">
-                <button id="logoutBtn" class="btn-outline">🚪 Logout</button>
-                <button id="changePwdBtn" class="btn-outline">🔑 Change password</button>
-            </div>
-        </div>
         <div class="tabs" id="tabsContainer"></div>
 
         <div id="tabAdmin" class="tab-pane">
@@ -281,7 +349,7 @@
                             <button id="createEmployeeBtn">➕ Create Employee</button>
                         </div>
                         <hr>
-                        <div class="form-group">
+                        <div id="scroll_to_update" class="form-group">
                             <label>✏️ Update Employee (by ID)</label>
                             <div class="grid-2">
                                 <input id="updateEmpId" placeholder="employee_id (required)">
@@ -453,7 +521,7 @@
             }
         }
         
-        document.getElementById('empCrudArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById('scroll_to_update').scrollIntoView({ behavior: 'smooth', block: 'start' });
         closeEmployeeModal();
         alert('Employee data loaded into edit form. Make changes and click "Update".');
     }
@@ -481,7 +549,20 @@
             if (claims && claims.user_data) {
                 currentRole = claims.user_data.role;
                 currentLogin = claims.user_data.login;
+                // Обновляем информацию в шапке
+                updateHeaderUserInfo();
             }
+        }
+    }
+    
+    function updateHeaderUserInfo() {
+        const headerUserInfo = document.getElementById('headerUserInfo');
+        if (currentRole && currentLogin) {
+            document.getElementById('headerUserRole').innerHTML = `<span class="badge role-${currentRole === 'admin' ? 'admin' : (currentRole === 'hr-manager' ? 'hr' : 'analyst')}">${currentRole}</span>`;
+            document.getElementById('headerUserLogin').innerText = currentLogin;
+            headerUserInfo.classList.remove('hidden');
+        } else {
+            headerUserInfo.classList.add('hidden');
         }
     }
 
@@ -533,6 +614,7 @@
         updateTokens(null, null);
         currentRole = null;
         currentLogin = null;
+        updateHeaderUserInfo();
         document.getElementById('authSection').style.display = 'block';
         document.getElementById('dashboard').style.display = 'none';
     }
@@ -679,7 +761,7 @@
                         <td><code style="word-break:break-all;">${escapeHtml(jti)}</code></td>
                      </tr>`;
         });
-        html += '</tbody></table>';
+        html += '</tbody><tr>';
         container.innerHTML = html;
     }
 
@@ -856,8 +938,7 @@
         updateTokens(acc, ref);
         document.getElementById('authSection').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
-        document.getElementById('userRoleSpan').innerHTML = `<span class="badge role-${currentRole === 'admin' ? 'admin' : (currentRole === 'hr-manager' ? 'hr' : 'analyst')}">${currentRole || '?'}</span>`;
-        document.getElementById('userLoginSpan').innerText = currentLogin || '?';
+        updateHeaderUserInfo();
         renderTabs();
         await loadUsers();
         await loadRoles();
@@ -968,7 +1049,6 @@
             logoutClient();
         }
         
-        // User search and pagination
         if (e.target.id === 'searchUsersBtn') { usersPage = 0; usersLoginFilter = document.getElementById('userLoginFilter').value; loadUsers(); }
         if (e.target.id === 'prevUsersPageBtn') { if (usersPage > 0) { usersPage--; loadUsers(); } }
         if (e.target.id === 'nextUsersPageBtn') { usersPage++; loadUsers(); }
@@ -1180,8 +1260,7 @@
             currentLogin = claims.user_data.login;
             document.getElementById('authSection').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('userRoleSpan').innerHTML = `<span class="badge role-${currentRole === 'admin' ? 'admin' : (currentRole === 'hr-manager' ? 'hr' : 'analyst')}">${currentRole || '?'}</span>`;
-            document.getElementById('userLoginSpan').innerText = currentLogin || '?';
+            updateHeaderUserInfo();
             renderTabs();
             loadUsers();
             loadRoles();
