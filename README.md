@@ -47,31 +47,29 @@ But you can specify the company structure as you want and don't use some of thes
 
 ## How to start?
 You can start the service with the docker (make sure that these commands executes **at the project's root**):
-1. 
+Clone the project:
 ``` bash
 git clone https://github.com/MaKcm14/one-team.git
 ```
 
-2. Prepare the config.yaml:
+Prepare the config.yaml:
 ``` bash
 cp config_example.yaml config.yaml
 ```
 Change the settings to yours.
 
-3. 
+Start the DB (if you want to use the default deployment):
 ``` bash
 docker compose up db
 ```
 Wait for a minute until let the PostgreSQL start.
 
-4. Apply migrations
-Copy your **DSN** from the config.yaml to the `docker-compose.yaml` in `migrate` service's command to apply the migrations.
-
+Apply migrations. Copy your **DSN** from the config.yaml to the `docker-compose.yaml` in `migrate` service's command to apply the migrations.
 ``` bash
 docker compose up migrate
 ```
 
-5. 
+Start the service:
 ``` bash
 docker compose up one-team
 ```
