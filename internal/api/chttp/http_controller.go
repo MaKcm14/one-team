@@ -98,6 +98,8 @@ func (c Controller) configEndpoints() {
 
 	c.e.POST("/init", c.auth.HandlerInit)
 
+	c.configWebStaticPoints()
+
 	adminGroup := c.e.Group("/admin", c.auth.VerifyAccessTokenMW(), c.auth.GrantAdminAccessMW())
 	{
 		adminGroup.GET("/get/users", c.adminRouter.HandlerAdminGetUsers)
@@ -148,4 +150,11 @@ func (c Controller) configEndpoints() {
 		divisionGroup.PUT("/update", c.divisionRouter.HandlerUpdateDivision, c.auth.GrantAdminAccessMW())
 		divisionGroup.DELETE("/delete", c.divisionRouter.HandlerDeleteDivision, c.auth.GrantAdminAccessMW())
 	}
+}
+
+func (c Controller) configWebStaticPoints() {
+	c.e.Static("/index.html", "./frontend/index.html")
+	c.e.Static("/logo.png", "./frontend/icons/logo.png")
+	c.e.Static("/logout-icon.png", "./frontend/icons/logout-icon.png")
+	c.e.Static("/pwd-icon.png", "./frontend/icons/pwd-icon.png")
 }

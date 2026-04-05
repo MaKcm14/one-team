@@ -7,6 +7,7 @@ import (
 
 	entity "github.com/MaKcm14/one-team/internal/entity/user"
 	"github.com/MaKcm14/one-team/internal/repository/persistent"
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
 )
 
 type Interactor struct {
@@ -19,8 +20,8 @@ func NewInteractor(repo IRootRepo) Interactor {
 	}
 }
 
-func (r Interactor) GetUsers(ctx context.Context) ([]UserDTO, error) {
-	list, err := r.repo.GetUsers(ctx)
+func (r Interactor) GetUsers(ctx context.Context, filters user.Filters) ([]UserDTO, error) {
+	list, err := r.repo.GetUsersByLogin(ctx, filters.LoginFilter)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrRepoInteract, err)
 	}

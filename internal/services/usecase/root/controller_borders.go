@@ -1,9 +1,13 @@
 package root
 
-import "context"
+import (
+	"context"
+
+	"github.com/MaKcm14/one-team/internal/services/usecase/user"
+)
 
 type IRootServiceReader interface {
-	GetUsers(ctx context.Context) ([]UserDTO, error)
+	GetUsers(ctx context.Context, filters user.Filters) ([]UserDTO, error)
 	GetRoles(ctx context.Context) ([]Role, error)
 }
 

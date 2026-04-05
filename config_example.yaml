@@ -2,9 +2,12 @@ controller:
     socket: 'localhost:8080'
 
     auth:
-        pwd_salt: 132784681
+        pwd_salt: 132784681 # Global password salt. Sets as the int-num.
 
-        secret: "SfouihcnswvUWIO_12f1biio"
+        secret: "SfouihcnswvUWIO_12f1biio" # AccessToken's secret. Uses for signing.
 
 db:
     dsn: 'dsn'
+
+logger:
+    mode: 'DEBUG || INFO || WARN || ERROR'
