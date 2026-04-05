@@ -10,4 +10,4 @@ db:
     dsn: 'dsn'
 
 logger:
-    mode: 'DEBUG || INFO || WARN || LEVEL'
+    mode: 'DEBUG || INFO || WARN || ERROR'
