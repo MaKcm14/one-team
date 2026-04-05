@@ -154,5 +154,7 @@ func (c Controller) configEndpoints() {
 
 func (c Controller) configWebStaticPoints() {
 	c.e.Static("/index.html", "./frontend/index.html")
-	c.e.Static("/logo.png", "./frontend/logo.png")
+	c.e.Static("/logo.png", "./frontend/icons/logo.png")
+	c.e.Static("/logout-icon.png", "./frontend/icons/logout-icon.png")
+	c.e.Static("/pwd-icon.png", "./frontend/icons/pwd-icon.png")
 }
