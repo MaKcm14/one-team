@@ -64,7 +64,7 @@ Start the DB (if you want to use the default deployment):
 ``` bash
 docker compose up db
 ```
-Wait for a minute until let the PostgreSQL start.
+Wait for a minute until the PostgreSQL start.
 
 Apply migrations. Copy your **DSN** from the config.yaml to the `docker-compose.yaml` in `migrate` service's command to apply the migrations.
 ``` bash
