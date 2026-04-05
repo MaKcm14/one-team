@@ -47,6 +47,7 @@ But you can specify the company structure as you want and don't use some of thes
 
 ## How to start?
 You can start the service with the docker (make sure that these commands executes **at the project's root**):
+
 Clone the project:
 ``` bash
 git clone https://github.com/MaKcm14/one-team.git
@@ -57,6 +58,7 @@ Prepare the config.yaml:
 cp config_example.yaml config.yaml
 ```
 Change the settings to yours.
+
 
 Start the DB (if you want to use the default deployment):
 ``` bash
@@ -90,7 +92,7 @@ As soon as you start the service at the first time you must to create the **init
 
 ![Admin-role's console page](./examples/admin_example_console.png)
 
-## How to specify the deploy environment
+## How to specify the deploy environment?
 For safety deploying you have to specify your deploy environment. F.e. the PostgreSQL roles and settings.
 
 See the **docker-compose.yaml** and **Dockerfile** at the project's root to do it.
