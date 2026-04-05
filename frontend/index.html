@@ -19,6 +19,8 @@
         .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; }
         .btn-danger { background: #ef4444; }
         .btn-danger:hover { background: #dc2626; }
+        .btn-close { background: #64748b; }
+        .btn-close:hover { background: #475569; }
         input, select, textarea { padding: 0.6rem 0.8rem; border-radius: 16px; border: 1px solid #cbd5e1; background: white; font-size: 0.85rem; width: 100%; margin-bottom: 0.75rem; }
         input:last-of-type, select:last-of-type { margin-bottom: 0; }
         label { font-weight: 500; font-size: 0.8rem; margin-bottom: 4px; display: block; color: #334155; }
@@ -27,6 +29,8 @@
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th, td { text-align: left; padding: 0.75rem 0.5rem; border-bottom: 1px solid #e2e8f0; }
         th { background: #f8fafc; font-weight: 600; }
+        .clickable-row { cursor: pointer; transition: background 0.2s; }
+        .clickable-row:hover { background: #f1f5f9; }
         .badge { background: #e2e8f0; padding: 0.2rem 0.6rem; border-radius: 40px; font-size: 0.7rem; display: inline-block; }
         .role-admin { background: #dcfce7; color: #166534; }
         .role-hr { background: #fff3e3; color: #9b3412; }
@@ -61,6 +65,19 @@
         
         .btn-icon-group { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
         .btn-icon-group button { margin-top: 0; flex: 1; }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 24px; max-width: 700px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 1.5rem; position: relative; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid #e2e8f0; }
+        .modal-header h3 { font-size: 1.3rem; font-weight: 600; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; margin-top: 0; }
+        .modal-close:hover { color: #1e293b; }
+        .detail-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .detail-item { margin-bottom: 0.75rem; }
+        .detail-label { font-size: 0.7rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem; }
+        .detail-value { font-size: 0.9rem; color: #1e293b; word-break: break-word; }
+        .detail-full-width { grid-column: span 2; }
+        @media (max-width: 640px) { .detail-grid { grid-template-columns: 1fr; } .detail-full-width { grid-column: span 1; } }
     </style>
 </head>
 <body>
@@ -147,6 +164,7 @@
                     <div class="pagination"><button id="prevDivPageBtn" class="btn-outline">◀ Prev</button><span id="divPageNumSpan">page 0</span><button id="nextDivPageBtn" class="btn-outline">Next ▶</button></div>
                     <hr>
                     <div id="divCreateUpdate">
+                        <!-- Форма создания -->
                         <div class="form-group">
                             <label>➕ Create division</label>
                             <input id="divName" placeholder="name">
@@ -161,17 +179,35 @@
                             <input id="divSuperId" placeholder="superdivision_id (0 if none)">
                             <button id="createDivisionBtn">Create division</button>
                         </div>
+                        
                         <hr>
+                        
+                        <!-- Форма обновления -->
                         <div class="form-group">
-                            <label>✏️ Update division</label>
+                            <label>✏️ Update division (by ID)</label>
                             <input id="updateDivId" placeholder="division_id">
                             <input id="updateDivName" placeholder="new name">
-                            <select id="updateDivType"><option value="">keep type</option><option value="division">division</option><option value="directorate">directorate</option><option value="department">department</option><option value="unit">unit</option><option value="group">group</option></select>
+                            <select id="updateDivType">
+                                <option value="">keep type</option>
+                                <option value="division">division</option>
+                                <option value="directorate">directorate</option>
+                                <option value="department">department</option>
+                                <option value="unit">unit</option>
+                                <option value="group">group</option>
+                            </select>
                             <input id="updateStateSize" placeholder="state size">
                             <input id="updateSuperId" placeholder="superdivision_id">
-                            <div class="btn-icon-group">
-                                <button id="updateDivisionBtn">Update</button>
-                                <button id="deleteDivisionBtn" class="btn-danger">❌ Delete</button>
+                            <button id="updateDivisionBtn">Update division</button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Форма удаления -->
+                        <div class="form-group">
+                            <label>🗑️ Delete division (by ID)</label>
+                            <div class="flex-row" style="gap:0.5rem; align-items:center;">
+                                <input id="deleteDivId" placeholder="division_id" style="flex:1; margin-bottom:0;">
+                                <button id="deleteDivisionBtn" class="btn-danger" style="margin-top:0;">🗑️ Delete division</button>
                             </div>
                         </div>
                     </div>
@@ -229,29 +265,61 @@
                     <div class="pagination"><button id="prevEmpPageBtn" class="btn-outline">◀ Prev</button><span id="empPageNumSpan">page 0</span><button id="nextEmpPageBtn" class="btn-outline">Next ▶</button></div>
                     <hr>
                     <div id="empCrudArea">
+                        <!-- Форма создания -->
                         <div class="form-group">
-                            <label>➕ Create / ✏️ Update employee</label>
+                            <label>➕ Create Employee</label>
                             <div class="grid-2">
-                                <input id="empId" placeholder="employee_id (for update)">
-                                <input id="tinNum" placeholder="tin_num">
-                                <input id="snils" placeholder="snils">
-                                <input id="passportData" placeholder="passport_data (ex: 1234 567890)">
-                                <input id="phoneNum" placeholder="phone">
-                                <input id="firstName" placeholder="first name">
-                                <input id="lastName" placeholder="last name">
-                                <input id="patronymic" placeholder="patronymic">
-                                <input id="address" placeholder="address">
-                                <select id="titleSelect"><option value="">-- load titles --</option></select>
-                                <select id="citizenshipSelect"><option value="">-- load citizenships --</option></select>
-                                <input type="date" id="hiringDate">
-                                <input id="divisionIdEmp" placeholder="unit.division_id">
-                                <input id="education" placeholder="education">
-                                <input id="salaryEmp" placeholder="salary" type="number" step="0.01">
+                                <input id="createTinNum" placeholder="tin_num">
+                                <input id="createSnils" placeholder="snils">
+                                <input id="createPassportData" placeholder="passport_data (ex: 1234 567890)">
+                                <input id="createPhoneNum" placeholder="phone">
+                                <input id="createFirstName" placeholder="first name">
+                                <input id="createLastName" placeholder="last name">
+                                <input id="createPatronymic" placeholder="patronymic">
+                                <input id="createAddress" placeholder="address">
+                                <select id="createTitleSelect"><option value="">-- load titles --</option></select>
+                                <select id="createCitizenshipSelect"><option value="">-- load citizenships --</option></select>
+                                <input type="date" id="createHiringDate">
+                                <input id="createDivisionIdEmp" placeholder="unit.division_id">
+                                <input id="createEducation" placeholder="education">
+                                <input id="createSalaryEmp" placeholder="salary" type="number" step="0.01">
                             </div>
-                            <div class="btn-icon-group" style="margin-top: 0.75rem;">
-                                <button id="createEmployeeBtn">➕ Create</button>
-                                <button id="updateEmployeeBtn">✏️ Update</button>
-                                <button id="deleteEmployeeBtn" class="btn-danger">🗑️ Delete</button>
+                            <button id="createEmployeeBtn">➕ Create Employee</button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Форма обновления -->
+                        <div class="form-group">
+                            <label>✏️ Update Employee (by ID)</label>
+                            <div class="grid-2">
+                                <input id="updateEmpId" placeholder="employee_id (required)">
+                                <input id="updateTinNum" placeholder="tin_num">
+                                <input id="updateSnils" placeholder="snils">
+                                <input id="updatePassportData" placeholder="passport_data">
+                                <input id="updatePhoneNum" placeholder="phone">
+                                <input id="updateFirstName" placeholder="first name">
+                                <input id="updateLastName" placeholder="last name">
+                                <input id="updatePatronymic" placeholder="patronymic">
+                                <input id="updateAddress" placeholder="address">
+                                <select id="updateTitleSelect"><option value="">-- keep unchanged --</option></select>
+                                <select id="updateCitizenshipSelect"><option value="">-- keep unchanged --</option></select>
+                                <input type="date" id="updateHiringDate">
+                                <input id="updateDivisionIdEmp" placeholder="unit.division_id">
+                                <input id="updateEducation" placeholder="education">
+                                <input id="updateSalaryEmp" placeholder="salary" type="number" step="0.01">
+                            </div>
+                            <button id="updateEmployeeBtn">✏️ Update Employee</button>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Форма удаления -->
+                        <div class="form-group">
+                            <label>🗑️ Delete Employee (by ID)</label>
+                            <div class="flex-row" style="gap:0.5rem; align-items:center;">
+                                <input id="deleteEmpId" placeholder="employee_id" style="flex:1; margin-bottom:0;">
+                                <button id="deleteEmployeeBtn" class="btn-danger" style="margin-top:0;">🗑️ Delete Employee</button>
                             </div>
                         </div>
                     </div>
@@ -289,6 +357,19 @@
     </div>
 </div>
 
+<!-- Modal for employee details -->
+<div id="employeeModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>👤 Employee Details</h3>
+            <button class="modal-close" onclick="closeEmployeeModal()">&times;</button>
+        </div>
+        <div id="modalContent">
+            <!-- Dynamic content will be inserted here -->
+        </div>
+    </div>
+</div>
+
 <script>
     let accessToken = localStorage.getItem('accessToken') || null;
     let refreshToken = localStorage.getItem('refreshToken') || null;
@@ -296,6 +377,98 @@
     let currentLogin = null;
     let divisionsPage = 0;
     let employeesPage = 0;
+    let currentEmployeesData = [];
+
+    function closeEmployeeModal() {
+        document.getElementById('employeeModal').style.display = 'none';
+    }
+
+    function showEmployeeModal(employee) {
+        const modalContent = document.getElementById('modalContent');
+        if (!employee) return;
+        
+        const formatDate = (dateStr) => {
+            if (!dateStr) return '—';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('ru-RU');
+        };
+        
+        const formatSalary = (salary) => {
+            if (!salary && salary !== 0) return '—';
+            return `₽${salary.toLocaleString()}`;
+        };
+        
+        modalContent.innerHTML = `
+            <div class="detail-grid">
+                <div class="detail-item"><div class="detail-label">Employee ID</div><div class="detail-value"><strong>${escapeHtml(String(employee.employee_id || '—'))}</strong></div></div>
+                <div class="detail-item"><div class="detail-label">Full Name</div><div class="detail-value">${escapeHtml(employee.last_name || '')} ${escapeHtml(employee.first_name || '')} ${escapeHtml(employee.patronymic || '')}</div></div>
+                <div class="detail-item"><div class="detail-label">Position / Title</div><div class="detail-value">${escapeHtml(employee.title?.name || '—')} ${employee.title?.title_id ? `(ID: ${employee.title.title_id})` : ''}</div></div>
+                <div class="detail-item"><div class="detail-label">Citizenship</div><div class="detail-value">${escapeHtml(employee.citizenship?.name || '—')} ${employee.citizenship?.citizenship_id ? `(ID: ${employee.citizenship.citizenship_id})` : ''}</div></div>
+                <div class="detail-item"><div class="detail-label">Unit / Division</div><div class="detail-value">${escapeHtml(employee.unit?.name || '—')} ${employee.unit?.division_id ? `(ID: ${employee.unit.division_id})` : ''}<br><span style="font-size:0.7rem; color:#64748b;">Type: ${escapeHtml(employee.unit?.type || '—')}</span></div></div>
+                <div class="detail-item"><div class="detail-label">Salary</div><div class="detail-value">${formatSalary(employee.salary)}</div></div>
+                <div class="detail-item"><div class="detail-label">Hiring Date</div><div class="detail-value">${formatDate(employee.hiring_date)}</div></div>
+                <div class="detail-item"><div class="detail-label">Education</div><div class="detail-value">${escapeHtml(employee.education || '—')}</div></div>
+                <div class="detail-item"><div class="detail-label">TIN (Tax ID)</div><div class="detail-value"><code>${escapeHtml(employee.tin_num || '—')}</code></div></div>
+                <div class="detail-item"><div class="detail-label">SNILS</div><div class="detail-value"><code>${escapeHtml(employee.snils || '—')}</code></div></div>
+                <div class="detail-item"><div class="detail-label">Passport Data</div><div class="detail-value"><code>${escapeHtml(employee.passport_data || '—')}</code></div></div>
+                <div class="detail-item"><div class="detail-label">Phone Number</div><div class="detail-value">${escapeHtml(employee.phone_num || '—')}</div></div>
+                <div class="detail-item detail-full-width"><div class="detail-label">Address</div><div class="detail-value">${escapeHtml(employee.address || '—')}</div></div>
+            </div>
+            <hr style="margin: 1rem 0;">
+            <div class="btn-icon-group">
+                <button class="btn-outline" onclick="closeEmployeeModal()">Close</button>
+                ${currentRole === 'admin' || currentRole === 'hr-manager' ? `<button class="btn" onclick="fillEditFormFromModal()">✏️ Edit Employee</button>` : ''}
+            </div>
+        `;
+        
+        window.currentModalEmployeeId = employee.employee_id;
+        document.getElementById('employeeModal').style.display = 'flex';
+    }
+    
+    function fillEditFormFromModal() {
+        const empId = window.currentModalEmployeeId;
+        if (!empId) return;
+        const employee = currentEmployeesData.find(e => e.employee_id === empId);
+        if (!employee) return;
+        
+        document.getElementById('updateEmpId').value = employee.employee_id || '';
+        document.getElementById('updateTinNum').value = employee.tin_num || '';
+        document.getElementById('updateSnils').value = employee.snils || '';
+        document.getElementById('updatePassportData').value = employee.passport_data || '';
+        document.getElementById('updatePhoneNum').value = employee.phone_num || '';
+        document.getElementById('updateFirstName').value = employee.first_name || '';
+        document.getElementById('updateLastName').value = employee.last_name || '';
+        document.getElementById('updatePatronymic').value = employee.patronymic || '';
+        document.getElementById('updateAddress').value = employee.address || '';
+        document.getElementById('updateHiringDate').value = employee.hiring_date ? employee.hiring_date.split('T')[0] : '';
+        document.getElementById('updateDivisionIdEmp').value = employee.unit?.division_id || '';
+        document.getElementById('updateEducation').value = employee.education || '';
+        document.getElementById('updateSalaryEmp').value = employee.salary || '';
+        
+        if (employee.title?.title_id) {
+            const titleSelect = document.getElementById('updateTitleSelect');
+            for (let i = 0; i < titleSelect.options.length; i++) {
+                if (parseInt(titleSelect.options[i].value) === employee.title.title_id) {
+                    titleSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        if (employee.citizenship?.citizenship_id) {
+            const citizenshipSelect = document.getElementById('updateCitizenshipSelect');
+            for (let i = 0; i < citizenshipSelect.options.length; i++) {
+                if (parseInt(citizenshipSelect.options[i].value) === employee.citizenship.citizenship_id) {
+                    citizenshipSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+        
+        document.getElementById('empCrudArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        closeEmployeeModal();
+        alert('Employee data loaded into edit form. Make changes and click "Update".');
+    }
 
     function parseJwt(token) {
         try {
@@ -452,7 +625,8 @@
             const res = await apiCall(url);
             if (res.ok) {
                 const data = await res.json();
-                renderEmployees(data.employees);
+                currentEmployeesData = data.employees || [];
+                renderEmployees(currentEmployeesData);
                 document.getElementById('empPageNumSpan').innerText = `page ${employeesPage}`;
             }
         } catch (e) { console.error(e); }
@@ -463,13 +637,15 @@
             const titlesRes = await apiCall('/employee/get/titles');
             if (titlesRes.ok) {
                 const t = await titlesRes.json();
-                populateSelect('titleSelect', t.titles, 'title_id', 'name');
+                populateSelect('createTitleSelect', t.titles, 'title_id', 'name');
+                populateSelect('updateTitleSelect', t.titles, 'title_id', 'name');
                 populateSelect('titleStatsSelect', t.titles, 'title_id', 'name');
             }
             const citRes = await apiCall('/employee/get/citizenships');
             if (citRes.ok) {
                 const c = await citRes.json();
-                populateSelect('citizenshipSelect', c.citizenships, 'citizenship_id', 'name');
+                populateSelect('createCitizenshipSelect', c.citizenships, 'citizenship_id', 'name');
+                populateSelect('updateCitizenshipSelect', c.citizenships, 'citizenship_id', 'name');
             }
         } catch (e) { console.error(e); }
     }
@@ -565,8 +741,9 @@
         }
         let html = '<table style="font-size:0.75rem; width:100%"><thead><tr><th>ID</th><th>Full name</th><th>Title</th><th>Unit</th><th>Salary</th><th>Passport</th></tr></thead><tbody>';
         employees.forEach(e => {
-            html += `<tr>
-                        <td>${e.employee_id || '-'}</td>
+            const employeeId = e.employee_id;
+            html += `<tr class="clickable-row" data-employee-id="${employeeId}">
+                        <td>${employeeId || '-'}</td>
                         <td>${escapeHtml(e.last_name || '')} ${escapeHtml(e.first_name || '')} ${escapeHtml(e.patronymic || '')}</td>
                         <td>${escapeHtml(e.title?.name || '-')}</td>
                         <td>${escapeHtml(e.unit?.name || '-')}</td>
@@ -576,6 +753,16 @@
         });
         html += '</tbody></table>';
         container.innerHTML = html;
+        
+        document.querySelectorAll('.clickable-row').forEach(row => {
+            row.removeEventListener('click', row.clickHandler);
+            row.clickHandler = () => {
+                const employeeId = parseInt(row.getAttribute('data-employee-id'));
+                const employee = currentEmployeesData.find(emp => emp.employee_id === employeeId);
+                if (employee) showEmployeeModal(employee);
+            };
+            row.addEventListener('click', row.clickHandler);
+        });
     }
 
     function renderCitizenshipStats(stats) {
@@ -684,24 +871,86 @@
         await loadTitlesAndCitizenships();
     }
 
-    function buildEmployeeFromForm() {
+    // Форма создания
+    function buildCreateEmployeeFromForm() {
+        let hiringDateRaw = document.getElementById('createHiringDate').value;
+        let formattedDate = '';
+        if (hiringDateRaw) {
+            formattedDate = hiringDateRaw + 'T00:00:00Z';
+        }
+        
         return {
-            employee_id: parseInt(document.getElementById('empId').value) || undefined,
-            tin_num: document.getElementById('tinNum').value,
-            snils: document.getElementById('snils').value,
-            passport_data: document.getElementById('passportData').value,
-            phone_num: document.getElementById('phoneNum').value,
-            first_name: document.getElementById('firstName').value,
-            last_name: document.getElementById('lastName').value,
-            patronymic: document.getElementById('patronymic').value,
-            address: document.getElementById('address').value,
-            title: { title_id: parseInt(document.getElementById('titleSelect').value) },
-            citizenship: { citizenship_id: parseInt(document.getElementById('citizenshipSelect').value) },
-            hiring_date: document.getElementById('hiringDate').value,
-            unit: { division_id: parseInt(document.getElementById('divisionIdEmp').value) || 0 },
-            education: document.getElementById('education').value,
-            salary: parseFloat(document.getElementById('salaryEmp').value)
+            tin_num: document.getElementById('createTinNum').value,
+            snils: document.getElementById('createSnils').value,
+            passport_data: document.getElementById('createPassportData').value,
+            phone_num: document.getElementById('createPhoneNum').value,
+            first_name: document.getElementById('createFirstName').value,
+            last_name: document.getElementById('createLastName').value,
+            patronymic: document.getElementById('createPatronymic').value,
+            address: document.getElementById('createAddress').value,
+            title: { title_id: parseInt(document.getElementById('createTitleSelect').value) },
+            citizenship: { citizenship_id: parseInt(document.getElementById('createCitizenshipSelect').value) },
+            hiring_date: formattedDate,
+            unit: { division_id: parseInt(document.getElementById('createDivisionIdEmp').value) || 0 },
+            education: document.getElementById('createEducation').value,
+            salary: parseFloat(document.getElementById('createSalaryEmp').value)
         };
+    }
+
+    // Форма обновления
+    function buildUpdateEmployeeFromForm() {
+        let hiringDateRaw = document.getElementById('updateHiringDate').value;
+        let formattedDate = '';
+        if (hiringDateRaw) {
+            formattedDate = hiringDateRaw + 'T00:00:00Z';
+        }
+        
+        const employee = {
+            employee_id: parseInt(document.getElementById('updateEmpId').value)
+        };
+        
+        const tinNum = document.getElementById('updateTinNum').value;
+        if (tinNum) employee.tin_num = tinNum;
+        
+        const snils = document.getElementById('updateSnils').value;
+        if (snils) employee.snils = snils;
+        
+        const passportData = document.getElementById('updatePassportData').value;
+        if (passportData) employee.passport_data = passportData;
+        
+        const phoneNum = document.getElementById('updatePhoneNum').value;
+        if (phoneNum) employee.phone_num = phoneNum;
+        
+        const firstName = document.getElementById('updateFirstName').value;
+        if (firstName) employee.first_name = firstName;
+        
+        const lastName = document.getElementById('updateLastName').value;
+        if (lastName) employee.last_name = lastName;
+        
+        const patronymic = document.getElementById('updatePatronymic').value;
+        if (patronymic) employee.patronymic = patronymic;
+        
+        const address = document.getElementById('updateAddress').value;
+        if (address) employee.address = address;
+        
+        const titleId = parseInt(document.getElementById('updateTitleSelect').value);
+        if (titleId) employee.title = { title_id: titleId };
+        
+        const citizenshipId = parseInt(document.getElementById('updateCitizenshipSelect').value);
+        if (citizenshipId) employee.citizenship = { citizenship_id: citizenshipId };
+        
+        if (formattedDate) employee.hiring_date = formattedDate;
+        
+        const divisionId = parseInt(document.getElementById('updateDivisionIdEmp').value);
+        if (divisionId) employee.unit = { division_id: divisionId };
+        
+        const education = document.getElementById('updateEducation').value;
+        if (education) employee.education = education;
+        
+        const salary = parseFloat(document.getElementById('updateSalaryEmp').value);
+        if (!isNaN(salary)) employee.salary = salary;
+        
+        return employee;
     }
 
     // Event handlers
@@ -801,11 +1050,17 @@
         }
         
         if (e.target.id === 'deleteDivisionBtn') {
-            const id = document.getElementById('updateDivId').value;
-            if (id && confirm('Delete division?')) {
+            const id = document.getElementById('deleteDivId').value;
+            if (!id) return alert('Division ID required');
+            if (confirm(`Delete division ${id}?`)) {
                 const res = await apiCall(`/division/delete?division_id=${id}`, { method: 'DELETE' });
-                if (res.ok) { alert('Deleted'); loadDivisions(); }
-                else alert('Error');
+                if (res.ok) { 
+                    alert('Division deleted'); 
+                    document.getElementById('deleteDivId').value = '';
+                    loadDivisions(); 
+                } else {
+                    alert('Error: Division may have employees or sub-divisions');
+                }
             }
         }
         
@@ -837,23 +1092,25 @@
         if (e.target.id === 'nextEmpPageBtn') { employeesPage++; loadEmployees(); }
         
         if (e.target.id === 'createEmployeeBtn') {
-            const emp = buildEmployeeFromForm();
+            const emp = buildCreateEmployeeFromForm();
+            if (!emp.last_name || !emp.first_name) return alert('First name and last name are required');
             const res = await apiCall('/employee/create', { method: 'POST', body: JSON.stringify(emp), headers: { 'Content-Type': 'application/json' } });
-            if (res.ok) { alert('Created'); loadEmployees(); }
+            if (res.ok) { alert('Employee created'); loadEmployees(); }
             else alert('Error');
         }
         
         if (e.target.id === 'updateEmployeeBtn') {
-            const emp = buildEmployeeFromForm();
+            const emp = buildUpdateEmployeeFromForm();
             if (!emp.employee_id) return alert('Employee ID required');
             const res = await apiCall('/employee/update', { method: 'PUT', body: JSON.stringify(emp), headers: { 'Content-Type': 'application/json' } });
-            if (res.ok) { alert('Updated'); loadEmployees(); }
+            if (res.ok) { alert('Employee updated'); loadEmployees(); }
             else alert('Error');
         }
         
         if (e.target.id === 'deleteEmployeeBtn') {
-            const id = document.getElementById('empId').value;
-            if (id && confirm('Delete employee?')) {
+            const id = document.getElementById('deleteEmpId').value;
+            if (!id) return alert('Employee ID required');
+            if (confirm(`Delete employee ${id}?`)) {
                 const res = await apiCall(`/employee/delete?employee_id=${id}`, { method: 'DELETE' });
                 if (res.ok) {
                     const blob = await res.blob();
@@ -863,6 +1120,7 @@
                     a.download = 'deleted_employee_report.xlsx';
                     a.click();
                     alert('Employee deleted');
+                    document.getElementById('deleteEmpId').value = '';
                     loadEmployees();
                 } else alert('Delete failed');
             }
@@ -911,7 +1169,13 @@
         }
     });
 
-    // Initial check
+    window.onclick = function(event) {
+        const modal = document.getElementById('employeeModal');
+        if (event.target === modal) {
+            closeEmployeeModal();
+        }
+    }
+
     if (accessToken) {
         const claims = parseJwt(accessToken);
         if (claims && claims.user_data) {
