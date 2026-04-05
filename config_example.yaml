@@ -8,3 +8,6 @@ controller:
 
 db:
     dsn: 'dsn'
+
+logger:
+    mode: 'DEBUG || INFO || WARN || LEVEL'

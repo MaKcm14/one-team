@@ -22,9 +22,14 @@ type ControllerConfig struct {
 	AuthCfg AuthConfig `yaml:"auth" env-required:"true"`
 }
 
+type LoggerConfig struct {
+	Mode string `yaml:"mode" env-required:"true"`
+}
+
 type Config struct {
 	DBCfg         DBConfig         `yaml:"db"`
 	ControllerCfg ControllerConfig `yaml:"controller"`
+	LoggerCfg     LoggerConfig     `yaml:"logger"`
 }
 
 func New(path string) (Config, error) {
